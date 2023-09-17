@@ -1,0 +1,14 @@
+name: json_serializer
+description: Automatically convert JSON to dart objects in runtime without code generation.
+version: 0.0.2
+repository: https://github.com/edsonbonfim/json_serializer
+
+environment:
+  sdk: ^3.1.1
+
+dependencies:
+  fake_reflection: ^1.0.2
+
+dev_dependencies:
+  lints: ^2.0.0
+  test: ^1.21.0
