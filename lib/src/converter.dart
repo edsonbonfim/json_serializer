@@ -47,7 +47,8 @@ class BoolConverter extends JsonConverter<bool> {
     try {
       return bool.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException('Error converting to bool: ${e.message}');
+      throw JsonDeserializationException(
+          'Error converting to bool: ${e.message}');
     }
   }
 }
@@ -73,7 +74,8 @@ class BigIntConverter extends JsonConverter<BigInt> {
     try {
       return BigInt.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException('Error converting to BigInt: ${e.message}');
+      throw JsonDeserializationException(
+          'Error converting to BigInt: ${e.message}');
     }
   }
 }
@@ -105,7 +107,8 @@ class DoubleConverter extends JsonConverter<double> {
     try {
       return double.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException('Error converting to double: ${e.message}');
+      throw JsonDeserializationException(
+          'Error converting to double: ${e.message}');
     }
   }
 }
@@ -120,7 +123,8 @@ class NumConverter extends JsonConverter<num> {
     try {
       return num.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException('Error converting to num: ${e.message}');
+      throw JsonDeserializationException(
+          'Error converting to num: ${e.message}');
     }
   }
 }
@@ -135,7 +139,8 @@ class UriConverter extends JsonConverter<Uri> {
     try {
       return Uri.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException('Error converting to Uri: ${e.message}');
+      throw JsonDeserializationException(
+          'Error converting to Uri: ${e.message}');
     }
   }
 }
@@ -150,7 +155,8 @@ class IntConverter extends JsonConverter<int> {
     try {
       return int.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException('Error converting to int: ${e.message}');
+      throw JsonDeserializationException(
+          'Error converting to int: ${e.message}');
     }
   }
 }
