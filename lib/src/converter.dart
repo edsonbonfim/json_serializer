@@ -254,7 +254,7 @@ class UserTypeConverter extends JsonConverter {
   convert(Object? value, TypeInfo type, JsonSerializerOptions options) {
     final values = value as Map;
     final userType = options.getUserType(type);
-    final classData = userType.classData!;
+    final classData = userType.classData;
     final args = <Symbol, dynamic>{};
 
     for (var param in classData.namedParams) {

@@ -22,7 +22,7 @@ final defaultUserTypes = <UserType>[
 /// A generic user-defined type class.
 class UserType<T> {
   /// Class metadata (reflection data).
-  final ClassData? classData;
+  final ClassData classData;
 
   /// Constructor function.
   final Function constructor;
@@ -33,7 +33,7 @@ class UserType<T> {
   /// Constructor for UserType.
   UserType(this.constructor)
       : name = T.toString(),
-        classData = constructor?.reflection();
+        classData = constructor.reflection();
 
   /// Create an empty list of type T.
   List<T> createList(int level) => [];
