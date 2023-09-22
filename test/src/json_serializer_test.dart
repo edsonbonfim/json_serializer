@@ -2,11 +2,17 @@ import 'package:json_serializer/json_serializer.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('JSON Serialization Tests for Complex Objects', () {
+  group('JSON Deserialization Tests for Complex Objects', () {
     setUp(() {
-      JsonSerializer.options = JsonSerializerOptions(userTypes: [
+      JsonSerializer.options = JsonSerializerOptions(types: [
         UserType<Person>(Person.new),
         UserType<Address>(Address.new),
+        UserType<Book>(Book.new),
+        UserType<Movie>(Movie.new),
+        UserType<MusicAlbum>(MusicAlbum.new),
+        UserType<Product>(Product.new),
+        UserType<Recipe>(Recipe.new),
+        UserType<Car>(Car.new),
       ]);
     });
 
@@ -81,17 +87,6 @@ void main() {
       expect(personWithSpecialChars.address.street, equals("987 Maple St"));
       expect(personWithSpecialChars.address.city, equals("Specialville"));
     });
-  });
-
-  group('JSON Serialization Tests for Complex Objects (Different Concepts)',
-      () {
-    setUp(() {
-      JsonSerializer.options = JsonSerializerOptions(userTypes: [
-        UserType<Book>(Book.new),
-        UserType<Movie>(Movie.new),
-        UserType<MusicAlbum>(MusicAlbum.new),
-      ]);
-    });
 
     test('Deserialize JSON for a Book', () {
       var jsonBook = '''
@@ -158,16 +153,6 @@ void main() {
       expect(result.tracks["Wanna Be Startin' Somethin'"], equals("Track 1"));
       expect(result.tracks["Thriller"], equals("Track 2"));
     });
-  });
-
-  group('JSON Serialization Tests for Complex Objects (More Concepts)', () {
-    setUp(() {
-      JsonSerializer.options = JsonSerializerOptions(userTypes: [
-        UserType<Product>(Product.new),
-        UserType<Recipe>(Recipe.new),
-        UserType<Car>(Car.new),
-      ]);
-    });
 
     test('Deserialize JSON for a Product', () {
       var jsonProduct = '''
@@ -228,11 +213,7 @@ void main() {
     });
   });
 
-  group('JSON Serialization Tests for Primitive Types', () {
-    setUp(() {
-      JsonSerializer.options = JsonSerializerOptions();
-    });
-
+  group('JSON Deserialization Tests for Primitive Types', () {
     test('Deserialize a simple string', () {
       var jsonString = '"Hello, World!"';
       var result = deserialize<String>(jsonString);
@@ -402,6 +383,52 @@ void main() {
       expect(result["endDate"], equals(DateTime.utc(2023, 9, 20, 12, 0, 0)));
     });
   });
+
+  group('JSON Deserialization Tests for Enum', () {
+    setUp(() {
+      JsonSerializer.options = JsonSerializerOptions(types: [
+        UserType<User>(User.new),
+        EnumType<Gender>(Gender.values),
+      ]);
+    });
+
+    test('Male Gender', () {
+      var json = '{"name": "John", "age": 30, "gender": "male"}';
+
+      var user = deserialize<User>(json);
+
+      expect(user.name, equals('John'));
+      expect(user.age, equals(30));
+      expect(user.gender, equals(Gender.male));
+    });
+
+    test('Female Gender', () {
+      var json = '{"name": "Jane", "age": 25, "gender": "female"}';
+
+      var user = deserialize<User>(json);
+
+      expect(user.name, equals('Jane'));
+      expect(user.age, equals(25));
+      expect(user.gender, equals(Gender.female));
+    });
+
+    test('Other Gender', () {
+      var json = '{"name": "Alex", "age": 28, "gender": "other"}';
+
+      var user = deserialize<User>(json);
+
+      expect(user.name, equals('Alex'));
+      expect(user.age, equals(28));
+      expect(user.gender, equals(Gender.other));
+    });
+
+    test('Invalid JSON', () {
+      var json = '{"name": "Sam", "age": 22, "gender": "unknown"}';
+
+      expect(() => deserialize<User>(json),
+          throwsA(TypeMatcher<JsonDeserializationException>()));
+    });
+  });
 }
 
 class Person {
@@ -501,4 +528,18 @@ class Car {
     required this.model,
     required this.features,
   });
+}
+
+enum Gender {
+  male,
+  female,
+  other,
+}
+
+class User {
+  final String name;
+  final int age;
+  final Gender gender;
+
+  User({required this.name, required this.age, required this.gender});
 }

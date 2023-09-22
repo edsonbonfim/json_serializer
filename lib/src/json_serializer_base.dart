@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:json_serializer/src/generic_type.dart';
+
 import 'converter.dart';
 import 'exception.dart';
 import 'parser.dart';
@@ -34,15 +36,15 @@ Object? parse(Object? value, TypeInfo type, JsonSerializerOptions options) {
 
 /// A class representing options for JSON serialization/deserialization.
 class JsonSerializerOptions {
-  final List<UserType> userTypes = defaultUserTypes;
+  final List<GenericType> types = defaultUserTypes;
 
   final List<JsonConverter> converters = defaultConverters;
 
   JsonSerializerOptions({
-    List<UserType> userTypes = const [],
+    List<GenericType> types = const [],
     List<JsonConverter> converters = const [],
   }) {
-    this.userTypes.addAll(userTypes);
+    this.types.addAll(types);
     this.converters.addAll(converters);
   }
 
@@ -57,9 +59,9 @@ class JsonSerializerOptions {
   /// Get the user-defined type information for a specific type.
   ///
   /// Returns the [UserType] information for the given [type] based on the
-  /// registered user types in [userTypes].
-  UserType getUserType(TypeInfo type) {
-    return userTypes.firstWhere((x) => x.name == type.name);
+  /// registered user types in [types].
+  GenericType getGenericType(TypeInfo type) {
+    return types.firstWhere((x) => x.name == type.name);
   }
 }
 

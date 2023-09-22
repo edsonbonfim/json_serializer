@@ -1,10 +1,12 @@
 import 'package:fake_reflection/fake_reflection.dart';
 
+import 'generic_type.dart';
+
 // Define a default user-defined type class.
 class DefaultUserType {}
 
 /// A list of default user-defined types.
-final defaultUserTypes = <UserType>[
+final defaultUserTypes = <GenericType>[
   BigIntType(),
   BoolType(),
   DoubleType(),
@@ -20,38 +22,15 @@ final defaultUserTypes = <UserType>[
 ];
 
 /// A generic user-defined type class.
-class UserType<T> {
+class UserType<T> extends GenericType<T> {
   /// Class metadata (reflection data).
   final ClassData classData;
 
   /// Constructor function.
   final Function constructor;
 
-  /// Name of the user-defined type.
-  final String name;
-
   /// Constructor for UserType.
-  UserType(this.constructor)
-      : name = T.toString(),
-        classData = constructor.reflection();
-
-  /// Create an empty list of type T.
-  List<T> createList(int level) => [];
-
-  /// Create an empty map of type T.
-  Map<String, T> createMapOfT() => {};
-
-  /// Create an empty map of nullable type T.
-  Map<String, T?> createMapOfNullableT() => {};
-
-  /// Create an empty list of maps with type T.
-  List<Map<String, T>> createListOfMapOfT() => [];
-
-  /// Create an empty map of lists with type T.
-  Map<String, List<T>> createMapOfListOfT(int level) => {};
-
-  /// Create an empty map of nullable lists with type T.
-  Map<String, List<T>?> createMapOfListOfNullableT() => {};
+  UserType(this.constructor) : classData = constructor.reflection();
 }
 
 /// User-defined type for BigInt.

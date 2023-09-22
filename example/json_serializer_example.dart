@@ -17,7 +17,7 @@ class Address {
 
 main() {
   // Define user-defined types for successful deserialization
-  JsonSerializer.options = JsonSerializerOptions(userTypes: [
+  JsonSerializer.options = JsonSerializerOptions(types: [
     UserType<Person>(Person.new),
     UserType<Address>(Address.new),
   ]);

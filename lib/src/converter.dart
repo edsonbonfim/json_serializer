@@ -1,4 +1,5 @@
-import 'exception.dart';
+import 'package:json_serializer/json_serializer.dart';
+
 import 'json_serializer_base.dart';
 import 'parser.dart';
 
@@ -16,7 +17,7 @@ final defaultConverters = <JsonConverter>[
   ListConverter(),
   ObjectConverter(),
   DynamicConverter(),
-  UserTypeConverter(),
+  GenericTypeConverter(),
 ];
 
 /// Abstract class defining the structure of a generic JSON converter.
@@ -182,7 +183,7 @@ class MapConverter extends JsonConverter<Map> {
 
     if (mapGenericType.isList) {
       final listGenericType = mapGenericType.genericArguments[0];
-      final listGenericUserType = options.getUserType(listGenericType);
+      final listGenericUserType = options.getGenericType(listGenericType);
 
       if (listGenericType.isNullable) {
         return listGenericUserType.createMapOfListOfNullableT();
@@ -191,7 +192,7 @@ class MapConverter extends JsonConverter<Map> {
       return listGenericUserType.createMapOfListOfT(1);
     }
 
-    final mapGenericUserType = options.getUserType(mapGenericType);
+    final mapGenericUserType = options.getGenericType(mapGenericType);
 
     if (mapGenericType.isNullable) {
       return mapGenericUserType.createMapOfNullableT();
@@ -222,10 +223,10 @@ class ListConverter extends JsonConverter<List> {
 
     if (listGenericType.isMap) {
       final mapGenericType = listGenericType.genericArguments[1];
-      return options.getUserType(mapGenericType).createListOfMapOfT();
+      return options.getGenericType(mapGenericType).createListOfMapOfT();
     }
 
-    return options.getUserType(listGenericType).createList(1);
+    return options.getGenericType(listGenericType).createList(1);
   }
 }
 
@@ -252,30 +253,48 @@ class DynamicConverter extends JsonConverter<dynamic> {
 }
 
 /// Converter for user-defined types.
-class UserTypeConverter extends JsonConverter {
+class GenericTypeConverter extends JsonConverter {
   @override
   bool canConvert(TypeInfo type) => true;
 
   @override
   convert(Object? value, TypeInfo type, JsonSerializerOptions options) {
-    final values = value as Map;
-    final userType = options.getUserType(type);
-    final classData = userType.classData;
-    final args = <Symbol, dynamic>{};
+    final genericType = options.getGenericType(type);
 
-    for (var param in classData.namedParams) {
-      if (param.required && !param.nullable && values[param.name] == null) {
+    if (genericType is EnumType) {
+      try {
+        return genericType.parse("$value");
+      } on ArgumentError catch (e) {
         throw JsonDeserializationException(
-            "Error converting user-defined type '${type}' for parameter '${param.name}' to type '${param.type}'");
-      }
-
-      if (values.containsKey(param.name)) {
-        final rawValue = values[param.name];
-        args[Symbol(param.name)] =
-            parse(rawValue, parseType(param.type), options);
+          'Error converting to ${type.type}: ${e.message}',
+        );
       }
     }
 
-    return Function.apply(userType.constructor, null, args);
+    if (genericType is UserType) {
+      final values = value as Map;
+      final classData = genericType.classData;
+      final args = <Symbol, dynamic>{};
+
+      for (var param in classData.namedParams) {
+        if (param.required && !param.nullable && values[param.name] == null) {
+          throw JsonDeserializationException(
+            "Error converting user-defined type '$type' for parameter '${param.name}' to type '${param.type}'",
+          );
+        }
+
+        if (values.containsKey(param.name)) {
+          final rawValue = values[param.name];
+          args[Symbol(param.name)] =
+              parse(rawValue, parseType(param.type), options);
+        }
+      }
+
+      return Function.apply(genericType.constructor, null, args);
+    }
+
+    throw JsonDeserializationException(
+      "Type $type is not described as user or enum type",
+    );
   }
 }

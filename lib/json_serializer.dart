@@ -5,6 +5,7 @@ import 'src/exception.dart';
 import 'src/json_serializer_base.dart';
 
 export 'src/converter.dart' show JsonConverter;
+export 'src/enum_type.dart' show EnumType;
 export 'src/exception.dart' show JsonDeserializationException;
 export 'src/json_serializer_base.dart'
     show JsonSerializer, JsonSerializerOptions;
