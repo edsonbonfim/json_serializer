@@ -1,19 +1,25 @@
-/// A custom exception class for handling JSON conversion errors.
-///
-/// Use this exception class when you encounter errors related to JSON conversion
-/// operations, such as parsing JSON strings or serializing objects to JSON.
-class JsonDeserializationException implements Exception {
-  /// The error message associated with this exception.
+/// Exception thrown when there is an error during parsing.
+class DartParserException implements Exception {
+  /// The error message associated with the exception.
   final String message;
 
-  /// Creates a new instance of [JsonDeserializationException] with the specified [message].
-  ///
-  /// The [message] parameter should provide details about the JSON conversion error.
-  JsonDeserializationException(this.message);
+  /// Creates a new instance of [DartParserException] with the given [message].
+  DartParserException(this.message);
 
-  /// Returns a string representation of this exception.
-  ///
-  /// The returned string includes the exception type and the associated error message.
+  @override
+  String toString() {
+    return 'ParserException: $message';
+  }
+}
+
+/// Exception thrown when there is an error during JSON serialization.
+class JsonSerializerException implements Exception {
+  /// The error message associated with the exception.
+  final String message;
+
+  /// Creates a new instance of [JsonSerializerException] with the given [message].
+  JsonSerializerException(this.message);
+
   @override
   String toString() {
     return 'JsonConversionException: $message';

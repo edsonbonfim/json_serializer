@@ -1,9 +1,14 @@
-import 'package:json_serializer/json_serializer.dart';
+/// This file contains the implementation of various JSON converters used in the JSON serialization process.
+/// Each converter is responsible for converting a specific data type to and from JSON.
+/// The converters are used by the `JsonSerializer` class to perform the serialization and deserialization operations.
 
+import 'enum_type.dart';
+import 'exception.dart';
 import 'json_serializer_base.dart';
 import 'parser.dart';
+import 'user_type.dart';
 
-/// List of default JSON converters.
+/// The list of default converters used by the `JsonSerializer`.
 final defaultConverters = <JsonConverter>[
   StringConverter(),
   BoolConverter(),
@@ -20,176 +25,220 @@ final defaultConverters = <JsonConverter>[
   GenericTypeConverter(),
 ];
 
-/// Abstract class defining the structure of a generic JSON converter.
+/// The base class for all JSON converters.
+/// A JSON converter is responsible for converting a specific data type to and from JSON.
 abstract class JsonConverter<T> {
-  /// Checks if the converter can handle the provided [type].
+  /// Determines whether this converter can convert the specified [type].
   bool canConvert(TypeInfo type);
 
-  /// Converts the given [value] to type [T].
-  T convert(dynamic value, TypeInfo type, JsonSerializerOptions options);
+  /// Converts the [value] of type [T] to JSON.
+  Object? write(T value, TypeInfo type, JsonSerializerOptions options);
 
-  /// Converts a null value of the provided [type] to type [T].
-  T? convertNull(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  /// Converts the JSON [value] to type [T].
+  T read(dynamic value, TypeInfo type, JsonSerializerOptions options);
+
+  /// Converts a null JSON value to type [T].
+  T? readNull(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     if (value == null) {
       return null;
     }
 
-    return convert(value, type, options);
+    return read(value, type, options);
   }
 }
 
-/// Converter for the bool type.
+/// A JSON converter for the `bool` data type.
 class BoolConverter extends JsonConverter<bool> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'bool';
 
   @override
-  bool convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(bool value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toString();
+  }
+
+  @override
+  bool read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     try {
       return bool.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException(
-          'Error converting to bool: ${e.message}');
+      throw JsonSerializerException('Error converting to bool: ${e.message}');
     }
   }
 }
 
-/// Converter for the String type.
+/// A JSON converter for the `String` data type.
 class StringConverter extends JsonConverter<String> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'String';
 
   @override
-  String convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(String value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toString();
+  }
+
+  @override
+  String read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     return value.toString();
   }
 }
 
-/// Converter for the BigInt type.
+/// A JSON converter for the `BigInt` data type.
 class BigIntConverter extends JsonConverter<BigInt> {
   @override
-  bool canConvert(TypeInfo type) => type.name == 'BigInt';
+  bool canConvert(TypeInfo type) =>
+      ['BigInt', '_BigIntImpl'].contains(type.name);
 
   @override
-  BigInt convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(BigInt value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toString();
+  }
+
+  @override
+  BigInt read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     try {
       return BigInt.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException(
-          'Error converting to BigInt: ${e.message}');
+      throw JsonSerializerException('Error converting to BigInt: ${e.message}');
     }
   }
 }
 
-/// Converter for the DateTime type.
+/// A JSON converter for the `DateTime` data type.
 class DateTimeConverter extends JsonConverter<DateTime> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'DateTime';
 
   @override
-  DateTime convert(
-      dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(DateTime value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toIso8601String();
+  }
+
+  @override
+  DateTime read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     try {
       return DateTime.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException(
+      throw JsonSerializerException(
           'Error converting to DateTime: ${e.message}');
     }
   }
 }
 
-/// Converter for the double type.
+/// A JSON converter for the `double` data type.
 class DoubleConverter extends JsonConverter<double> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'double';
 
   @override
-  double convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(double value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toString();
+  }
+
+  @override
+  double read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     try {
       return double.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException(
-          'Error converting to double: ${e.message}');
+      throw JsonSerializerException('Error converting to double: ${e.message}');
     }
   }
 }
 
-/// Converter for the num type.
+/// A JSON converter for the `num` data type.
 class NumConverter extends JsonConverter<num> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'num';
 
   @override
-  num convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(num value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toString();
+  }
+
+  @override
+  num read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     try {
       return num.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException(
-          'Error converting to num: ${e.message}');
+      throw JsonSerializerException('Error converting to num: ${e.message}');
     }
   }
 }
 
-/// Converter for the Uri type.
+/// A JSON converter for the `Uri` data type.
 class UriConverter extends JsonConverter<Uri> {
   @override
-  bool canConvert(TypeInfo type) => type.name == 'Uri';
+  bool canConvert(TypeInfo type) => ['Uri', '_SimpleUri'].contains(type.name);
 
   @override
-  Uri convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(Uri value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toString();
+  }
+
+  @override
+  Uri read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     try {
       return Uri.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException(
-          'Error converting to Uri: ${e.message}');
+      throw JsonSerializerException('Error converting to Uri: ${e.message}');
     }
   }
 }
 
-/// Converter for the int type.
+/// A JSON converter for the `int` data type.
 class IntConverter extends JsonConverter<int> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'int';
 
   @override
-  int convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(int value, TypeInfo type, JsonSerializerOptions options) {
+    return value.toString();
+  }
+
+  @override
+  int read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     try {
       return int.parse("$value");
     } on FormatException catch (e) {
-      throw JsonDeserializationException(
-          'Error converting to int: ${e.message}');
+      throw JsonSerializerException('Error converting to int: ${e.message}');
     }
   }
 }
 
-/// Converter for the Map type.
+/// A JSON converter for the `Map` data type.
 class MapConverter extends JsonConverter<Map> {
   @override
   bool canConvert(TypeInfo type) => type.isMap;
 
   @override
-  Map convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(Map value, TypeInfo type, JsonSerializerOptions options) {
+    return value;
+  }
+
+  @override
+  Map read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     final map = _createGenericMap(type, options);
 
     value.forEach((k, v) {
-      map[k] = parse(v, type.genericArguments[1], options);
+      map[k] = decode(v, type.generics[1], options);
     });
 
     return map;
   }
 
+  /// Creates a generic map based on the [type] and [options].
   Map _createGenericMap(TypeInfo type, JsonSerializerOptions options) {
-    final mapGenericType = type.genericArguments[1];
+    final mapGenericType = type.generics[1];
 
     if (mapGenericType.isList) {
-      final listGenericType = mapGenericType.genericArguments[0];
+      final listGenericType = mapGenericType.generics[0];
       final listGenericUserType = options.getGenericType(listGenericType);
 
       if (listGenericType.isNullable) {
         return listGenericUserType.createMapOfListOfNullableT();
       }
 
-      return listGenericUserType.createMapOfListOfT(1);
+      return listGenericUserType.createMapOfListOfT();
     }
 
     final mapGenericUserType = options.getGenericType(mapGenericType);
@@ -202,98 +251,130 @@ class MapConverter extends JsonConverter<Map> {
   }
 }
 
-/// Converter for the List type.
+/// A JSON converter for the `List` data type.
 class ListConverter extends JsonConverter<List> {
   @override
   bool canConvert(TypeInfo type) => type.isList;
 
   @override
-  List convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(List value, TypeInfo type, JsonSerializerOptions options) {
+    return value;
+  }
+
+  @override
+  List read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     final list = _createGenericList(type, options);
 
     for (var x in value) {
-      list.add(parse(x, type.genericArguments[0], options));
+      list.add(decode(x, type.generics[0], options));
     }
 
     return list;
   }
 
+  /// Creates a generic list based on the [type] and [options].
   List _createGenericList(TypeInfo type, JsonSerializerOptions options) {
-    final listGenericType = type.genericArguments[0];
+    final listGenericType = type.generics[0];
 
     if (listGenericType.isMap) {
-      final mapGenericType = listGenericType.genericArguments[1];
+      final mapGenericType = listGenericType.generics[1];
       return options.getGenericType(mapGenericType).createListOfMapOfT();
     }
 
-    return options.getGenericType(listGenericType).createList(1);
+    return options.getGenericType(listGenericType).createList();
   }
 }
 
-/// Converter for the Object type.
+/// A JSON converter for the `Object` data type.
 class ObjectConverter extends JsonConverter<Object> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'Object';
 
   @override
-  Object convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(Object value, TypeInfo type, JsonSerializerOptions options) {
+    return value;
+  }
+
+  @override
+  Object read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     return value;
   }
 }
 
-/// Converter for the dynamic type.
+/// A JSON converter for the `dynamic` data type.
 class DynamicConverter extends JsonConverter<dynamic> {
   @override
   bool canConvert(TypeInfo type) => type.name == 'dynamic';
 
   @override
-  dynamic convert(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(dynamic value, TypeInfo type, JsonSerializerOptions options) {
+    return value;
+  }
+
+  @override
+  dynamic read(dynamic value, TypeInfo type, JsonSerializerOptions options) {
     return value;
   }
 }
 
-/// Converter for user-defined types.
+/// A JSON converter for generic types.
+/// This converter handles the serialization and deserialization of generic types.
 class GenericTypeConverter extends JsonConverter {
   @override
   bool canConvert(TypeInfo type) => true;
 
   @override
-  convert(Object? value, TypeInfo type, JsonSerializerOptions options) {
+  Object? write(value, TypeInfo type, JsonSerializerOptions options) {
+    final genericType = options.getGenericType(type);
+
+    if (genericType is EnumType) {
+      return (value as Enum).name;
+    }
+
+    if (value is Serializable) {
+      return value.toMap();
+    }
+
+    return value;
+  }
+
+  @override
+  read(Object? value, TypeInfo type, JsonSerializerOptions options) {
     final genericType = options.getGenericType(type);
 
     if (genericType is EnumType) {
       try {
         return genericType.parse("$value");
       } on ArgumentError catch (e) {
-        throw JsonDeserializationException(
-          'Error converting to ${type.type}: ${e.message}',
+        throw JsonSerializerException(
+          'Error converting to ${type.name}: ${e.message}',
         );
       }
     }
 
     if (genericType is UserType) {
       final values = value as Map;
-      final classData = genericType.classData;
       final args = <Symbol, dynamic>{};
 
-      for (var param in classData.namedParams) {
-        if (param.required && !param.nullable && values[param.name] == null) {
-          throw JsonDeserializationException(
+      for (var param in genericType.info.named) {
+        if (param.isRequired &&
+            !param.type.isNullable &&
+            values[param.name] == null) {
+          throw JsonSerializerException(
             "Error converting user-defined type '$type' for parameter '${param.name}' to type '${param.type}'",
           );
         }
 
         if (values.containsKey(param.name)) {
           final rawValue = values[param.name];
-          args[Symbol(param.name)] =
-              parse(rawValue, parseType(param.type), options);
+          args[Symbol(param.name)] = decode(rawValue, param.type, options);
         }
       }
 
-      return Function.apply(genericType.constructor, null, args);
+      return Function.apply(genericType.function, null, args);
     }
 
-    throw JsonDeserializationException(
+    throw JsonSerializerException(
       "Type $type is not described as user or enum type",
     );
   }

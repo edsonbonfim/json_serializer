@@ -1,8 +1,7 @@
-import 'package:fake_reflection/fake_reflection.dart';
-
 import 'generic_type.dart';
+import 'parser.dart';
 
-// Define a default user-defined type class.
+/// Define a default user-defined type class.
 class DefaultUserType {}
 
 /// A list of default user-defined types.
@@ -21,78 +20,89 @@ final defaultUserTypes = <GenericType>[
   ListType(),
 ];
 
-/// A generic user-defined type class.
+/// Represents a user-defined type.
 class UserType<T> extends GenericType<T> {
-  /// Class metadata (reflection data).
-  final ClassData classData;
+  final Function function;
+  final FunctionInfo info;
 
-  /// Constructor function.
-  final Function constructor;
-
-  /// Constructor for UserType.
-  UserType(this.constructor) : classData = constructor.reflection();
+  /// Creates a new instance of the [UserType] class.
+  ///
+  /// The [function] parameter is the user-defined function associated with the type.
+  UserType(this.function) : info = DartParser.parseFunction(function);
 }
 
-/// User-defined type for BigInt.
+/// Represents a user-defined type for [BigInt].
 class BigIntType extends UserType<BigInt> {
+  /// Creates a new instance of the [BigIntType] class.
   BigIntType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for bool.
+/// Represents a user-defined type for [bool].
 class BoolType extends UserType<bool> {
+  /// Creates a new instance of the [BoolType] class.
   BoolType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for double.
+/// Represents a user-defined type for [double].
 class DoubleType extends UserType<double> {
+  /// Creates a new instance of the [DoubleType] class.
   DoubleType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for int.
+/// Represents a user-defined type for [int].
 class IntType extends UserType<int> {
+  /// Creates a new instance of the [IntType] class.
   IntType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for num.
+/// Represents a user-defined type for [num].
 class NumType extends UserType<num> {
+  /// Creates a new instance of the [NumType] class.
   NumType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for String.
+/// Represents a user-defined type for [String].
 class StringType extends UserType<String> {
+  /// Creates a new instance of the [StringType] class.
   StringType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for DateTime.
+/// Represents a user-defined type for [DateTime].
 class DateTimeType extends UserType<DateTime> {
+  /// Creates a new instance of the [DateTimeType] class.
   DateTimeType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for Uri.
+/// Represents a user-defined type for [Uri].
 class UriType extends UserType<Uri> {
+  /// Creates a new instance of the [UriType] class.
   UriType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for Object.
+/// Represents a user-defined type for [Object].
 class ObjectType extends UserType<Object> {
+  /// Creates a new instance of the [ObjectType] class.
   ObjectType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for dynamic.
+/// Represents a user-defined type for [dynamic].
 class DynamicType extends UserType<dynamic> {
+  /// Creates a new instance of the [DynamicType] class.
   DynamicType() : super(DefaultUserType.new);
 }
 
-/// User-defined type for Map.
+/// Represents a user-defined type for [Map].
 class MapType extends UserType<Map<String, dynamic>> {
+  /// Creates a new instance of the [MapType] class.
   MapType() : super(DefaultUserType.new);
 
   @override
   String get name => "Map";
 }
 
-/// User-defined type for List.
+/// Represents a user-defined type for [List].
 class ListType extends UserType<List> {
+  /// Creates a new instance of the [ListType] class.
   ListType() : super(DefaultUserType.new);
 
   @override

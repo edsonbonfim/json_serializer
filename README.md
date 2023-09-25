@@ -1,19 +1,11 @@
-json_serializer
-===============
+# JSON Serializer
 
-A Dart library for effortless JSON deserialization.
+A versatile Dart package for effortless JSON serialization and deserialization without the need for
+code generation or reflection.
 
-* * *
+---
 
-Features
---------
-
-* Effortless JSON deserialization.
-* Customizable with user-defined types.
-* Robust error handling with a dedicated exception class.
-
-Getting Started
----------------
+## Getting Started
 
 To get started, simply import the `json_serializer` package:
 
@@ -26,12 +18,14 @@ import 'package:json_serializer/json_serializer.dart';
 Suppose you have the following Dart classes:
 
 ```dart
+enum Gender { male, female }
+
 class Person {
   final String name;
-  final int age;
+  final Gender gender;
   final Address address;
 
-  Person({required this.name, required this.age, required this.address});
+  Person({required this.name, required this.gender, required this.address});
 }
 
 class Address {
@@ -47,50 +41,71 @@ You can deserialize JSON data into these classes as follows:
 ```dart
 main() {
   // Define user-defined types for successful deserialization
-  JsonSerializer.options = JsonSerializerOptions(userTypes: [
+  JsonSerializer.options = JsonSerializerOptions(types: [
     UserType<Person>(Person.new),
     UserType<Address>(Address.new),
+    EnumType<Gender>(Gender.values),
   ]);
 
-  var json = '{"name": "John", "age": 30, "address": {"street": "123 Main St", "city": "Sampletown"}}';
+  var json =
+      '{"name":"John","gender":"male","address":{"street":"123 Main St","city":"Sampletown"}}';
 
   var person = deserialize<Person>(json);
 
   print('Name: ${person.name}');
-  print('Age: ${person.age}');
+  print('Gender: ${person.gender.name}');
   print('Street: ${person.address.street}');
   print('City: ${person.address.city}');
 }
 ```
 
-This example demonstrates successful JSON deserialization into nested objects.
+Note that you should use `JsonSerializerOptions` to register all of your referenced classes or
+enums.
 
-### Exception Handling
+### Serialization
 
-The library provides a dedicated `JsonConversionException` for handling JSON conversion errors:
+To serialize, all your referenced classes should implement the `Serializable` interface, which
+requires an implementation of `toMap`, a simple map of key and value properties.
 
 ```dart
-try {
-  final invalidJson = '{"name": "John", "age": "thirty"}';
-  final person = deserialize<Person>(invalidJson);
-} catch (e) {
-  if (e is JsonConversionException) {
-    print('JSON conversion error: ${e.message}');
+class Person implements Serializable {
+  final String name;
+  final Gender gender;
+  final Address address;
+
+  Person({required this.name, required this.gender, required this.address});
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {'name': name, 'gender': gender, 'address': address};
+  }
+}
+
+class Address implements Serializable {
+  final String street;
+  final String city;
+
+  Address({required this.street, required this.city});
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {'street': street, 'city': city};
   }
 }
 ```
 
-Serialization (Coming Soon)
----------------------------
+You can then easily serialize objects:
 
-Serialization functionality is currently under evaluation and is planned for future implementation.
+```dart
+print(serialize(person));
+// {"name":"John","gender":"male","address":{"street":"123 Main St","city":"Sampletown"}}
+```
 
-License
--------
+## License
 
 This library is licensed under the [BSD 3-Clause License](LICENSE). Feel free to use it and
 contribute to its development.
 
-* * *
+---
 
 Made with ❤️ by Edson Bonfim

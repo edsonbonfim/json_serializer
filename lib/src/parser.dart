@@ -1,324 +1,428 @@
 import 'exception.dart';
 
-/// Utility function to parse type information.
-///
-/// Parses the type information from the given [typeName] or from the type [T] if
-/// [typeName] is not provided. It returns a [TypeInfo] object representing the
-/// parsed type information.
-TypeInfo parseType<T>([String? typeName]) {
-  final ast = Parser(typeName ?? T.toString()).parse();
-  return TypeInfo.fromAst(ast);
-}
-
-/// Token class representing lexer tokens.
-class Token {
-  final TokenType type;
-  final String lexeme;
-
-  Token(this.type, this.lexeme);
-}
-
-/// Enum for token types.
+/// Represents the different types of tokens in the Dart lexer.
 enum TokenType {
   identifier,
-  lessThan,
-  greaterThan,
+  colon,
+  lParen,
+  rParen,
   comma,
+  lCurlyBracket,
+  rCurlyBracket,
+  lSquareBracket,
+  rSquareBracket,
   questionMark,
+  equals,
+  greaterThan,
+  lessThan,
+  eof
 }
 
-/// Dart lexer.
-class Lexer {
+/// Represents a token in the Dart lexer.
+class Token {
+  /// The type of the token.
+  final TokenType type;
+
+  /// The lexeme of the token.
+  final String lexeme;
+
+  /// Creates a new instance of the [Token] class.
+  Token(this.type, this.lexeme);
+
+  @override
+  String toString() => lexeme;
+}
+
+/// A map of symbol tokens used in the Dart lexer.
+final symbolTokens = <String, Token>{
+  ':': Token(TokenType.colon, ':'),
+  '(': Token(TokenType.lParen, '('),
+  ')': Token(TokenType.rParen, ')'),
+  ',': Token(TokenType.comma, ','),
+  '{': Token(TokenType.lCurlyBracket, '{'),
+  '}': Token(TokenType.rCurlyBracket, '}'),
+  '[': Token(TokenType.lSquareBracket, '['),
+  ']': Token(TokenType.rSquareBracket, ']'),
+  '?': Token(TokenType.questionMark, '?'),
+  '=': Token(TokenType.equals, '='),
+  '>': Token(TokenType.greaterThan, '>'),
+  '<': Token(TokenType.lessThan, '<'),
+};
+
+/// The Dart lexer responsible for tokenizing input strings.
+class DartLexer {
+  /// The input string to be tokenized.
   final String input;
-  int currentPosition = 0;
 
-  Lexer(this.input);
+  var _position = 0;
 
-  /// Get the next token in the input.
+  /// Creates a new instance of the [DartLexer] class.
+  DartLexer(this.input);
+
+  /// Retrieves the next token from the input string.
   Token getNextToken() {
-    if (currentPosition >= input.length) {
-      return Token(TokenType.identifier, ''); // End of File (EOF)
+    if (_position >= input.length) {
+      return Token(TokenType.eof, '');
     }
 
-    final currentChar = input[currentPosition];
+    final ch = input[_position];
 
-    // Check for token types
-    if ([' ', '\r', '\n', '\t', '\s'].contains(currentChar)) {
-      currentPosition++;
+    if (isWhiteSpace(ch)) {
+      _position++;
       return getNextToken();
     }
-    if (currentChar == '<') {
-      currentPosition++;
-      return Token(TokenType.lessThan, '<');
-    } else if (currentChar == '>') {
-      currentPosition++;
-      return Token(TokenType.greaterThan, '>');
-    } else if (currentChar == ',') {
-      currentPosition++;
-      return Token(TokenType.comma, ',');
-    } else if (currentChar == '?') {
-      currentPosition++;
-      return Token(TokenType.questionMark, '?');
-    } else if (isIdentifierStart(currentChar)) {
-      final start = currentPosition;
-      while (currentPosition < input.length &&
-          isIdentifierPart(input[currentPosition])) {
-        currentPosition++;
-      }
-      final lexeme = input.substring(start, currentPosition);
-      return Token(TokenType.identifier, lexeme);
-    } else {
-      throw JsonDeserializationException('Unexpected character: $currentChar');
+
+    if (symbolTokens.containsKey(ch)) {
+      _position++;
+      return symbolTokens[ch]!;
     }
+
+    if (isIdentifierStart(ch)) {
+      var identifier = '';
+
+      while (_position < input.length && isIdentifierPart(input[_position])) {
+        identifier += input[_position++];
+      }
+
+      return Token(TokenType.identifier, identifier);
+    }
+
+    throw FormatException("Unrecognized token '$ch'");
   }
 
-  // Helper functions to check identifier characters
-  bool isIdentifierStart(String char) {
-    final codeUnit = char.codeUnitAt(0);
+  /// Checks if the given character is a whitespace character.
+  bool isWhiteSpace(String ch) {
+    final codeUnit = ch.codeUnitAt(0);
+    return codeUnit == 10 || // \n
+        codeUnit == 13 || // /r
+        codeUnit == 9 || // \t
+        codeUnit == 32; // ' '
+  }
+
+  /// Checks if the given character is a valid identifier start character.
+  bool isIdentifierStart(String ch) {
+    final codeUnit = ch.codeUnitAt(0);
     return (codeUnit >= 65 && codeUnit <= 90) || // A-Z
         (codeUnit >= 97 && codeUnit <= 122) || // a-z
         (codeUnit == 95); // _
   }
 
-  bool isIdentifierPart(String char) {
-    return isIdentifierStart(char) || isDigit(char);
+  /// Checks if the given character is a valid identifier part character.
+  bool isIdentifierPart(String ch) {
+    return isIdentifierStart(ch) || isDigit(ch);
   }
 
-  bool isDigit(String char) {
-    final codeUnit = char.codeUnitAt(0);
+  /// Checks if the given character is a digit character.
+  bool isDigit(String ch) {
+    final codeUnit = ch.codeUnitAt(0);
     return codeUnit >= 48 && codeUnit <= 57; // 0-9
   }
 }
 
-/// Abstract base node for the AST.
-abstract class AstNode {}
+/// Represents the parameters of a function.
+class Parameters {
+  /// The positional parameters.
+  final List<TypeInfo> positional;
 
-/// Node to represent a type.
-class TypeNode extends AstNode {
-  final AstNode typeName;
-  final bool isNullable;
-  final AstNode? typeArguments;
+  /// The optional parameters.
+  final List<TypeInfo> optional;
 
-  TypeNode(this.typeName, this.isNullable, this.typeArguments);
+  /// The named parameters.
+  final List<PropertyInfo> named;
 
-  @override
-  String toString() {
-    final typeNameStr = typeName.toString();
-    final typeArgumentsStr = typeArguments != null ? '$typeArguments' : '';
-    return '$typeNameStr$typeArgumentsStr';
-  }
+  /// Creates a new instance of the [Parameters] class.
+  Parameters(this.positional, this.optional, this.named);
 }
 
-/// Node to represent a type name.
-class TypeNameNode extends AstNode {
+/// Represents information about a function.
+class FunctionInfo {
+  /// The return type of the function.
+  final TypeInfo type;
+
+  /// The positional parameters of the function.
+  final List<TypeInfo> positional;
+
+  /// The optional parameters of the function.
+  final List<TypeInfo> optional;
+
+  /// The named parameters of the function.
+  final List<PropertyInfo> named;
+
+  /// Creates a new instance of the [FunctionInfo] class.
+  FunctionInfo(this.type, this.positional, this.optional, this.named);
+}
+
+/// Represents information about a property.
+class PropertyInfo {
+  /// The type of the property.
+  final TypeInfo type;
+
+  /// The name of the property.
   final String name;
 
-  TypeNameNode(this.name);
+  /// Indicates if the property is required.
+  final bool isRequired;
 
-  @override
-  String toString() {
-    return name;
-  }
+  /// Creates a new instance of the [PropertyInfo] class.
+  PropertyInfo(this.type, this.name, this.isRequired);
 }
 
-/// Node to represent a list of types.
-class TypeListNode extends AstNode {
-  final List<AstNode> types;
-
-  TypeListNode(this.types);
-
-  @override
-  String toString() {
-    final typeList = types.join(', ');
-    return '<$typeList>';
-  }
-}
-
-/// Dart parser for type expressions based on the following grammar:
-///
-/// type:
-///   typeName
-///   | typeName '?'
-///   | typeName '<' typeList '>'
-///   | typeName '<' typeList '>' '?'
-///
-/// typeName:
-///   identifier
-///
-/// typeList:
-///   type (',' type)*
-class Parser {
-  final Lexer lexer;
-  late Token currentToken;
-
-  Parser(String input) : lexer = Lexer(input) {
-    // Initialize the parser by getting the first token
-    currentToken = lexer.getNextToken();
-  }
-
-  /// Parse a type expression from the input.
-  TypeNode parse() => parseType();
-
-  /// Parse type.
-  ///
-  /// type:
-  ///   typeName
-  ///   | typeName '?'
-  ///   | typeName '<' typeList '>'
-  ///   | typeName '<' typeList '>' '?'
-  TypeNode parseType() {
-    final typeName = parseTypeName();
-
-    if (match(TokenType.questionMark)) {
-      consumeToken(TokenType.questionMark);
-      return TypeNode(typeName, true, null);
-    }
-
-    if (match(TokenType.lessThan)) {
-      consumeToken(TokenType.lessThan);
-      final typeList = parseTypeList();
-      consumeToken(TokenType.greaterThan);
-
-      if (match(TokenType.questionMark)) {
-        consumeToken(TokenType.questionMark);
-        return TypeNode(typeName, true, typeList);
-      }
-
-      return TypeNode(typeName, false, typeList);
-    }
-
-    return TypeNode(typeName, false, null);
-  }
-
-  /// Parse a type name.
-  ///
-  /// typeName:
-  ///   identifier
-  AstNode parseTypeName() {
-    if (match(TokenType.identifier)) {
-      final name = currentToken.lexeme;
-      consumeToken(TokenType.identifier);
-      return TypeNameNode(name);
-    } else {
-      throw Exception('Expected a type name');
-    }
-  }
-
-  /// Parse type list (generics).
-  ///
-  /// typeList:
-  ///   type (',' type)*
-  AstNode parseTypeList() {
-    final argumentList = <AstNode>[];
-
-    while (!match(TokenType.greaterThan)) {
-      argumentList.add(parseType());
-
-      if (match(TokenType.comma)) {
-        consumeToken(TokenType.comma);
-      }
-    }
-
-    return TypeListNode(argumentList);
-  }
-
-  // Helper method to match the current token type.
-  bool match(TokenType expectedType) {
-    return currentToken.type == expectedType;
-  }
-
-  // Helper method to consume the current token and advance to the next.
-  void consumeToken(TokenType expectedType) {
-    if (match(expectedType)) {
-      currentToken = lexer.getNextToken();
-    } else {
-      throw JsonDeserializationException(
-          'Expected token type $expectedType, but got ${currentToken.type}');
-    }
-  }
-}
-
-/// A class to represent type information.
+/// Represents information about a type.
 class TypeInfo {
-  final bool isNullable;
-  final bool isList;
-  final bool isMap;
-  final bool isGeneric;
+  /// The name of the type.
   final String name;
-  final List<TypeInfo> genericArguments;
-  final String type;
 
-  /// Constructor to initialize TypeInfo.
-  ///
-  /// Initializes a [TypeInfo] object with the provided information.
-  TypeInfo({
-    required this.isNullable,
-    required this.isList,
-    required this.isMap,
-    required this.isGeneric,
-    required this.name,
-    required this.genericArguments,
-    required this.type,
-  });
+  /// Indicates if the type is nullable.
+  final bool isNullable;
 
-  /// Factory constructor to create TypeInfo from an AST node.
-  ///
-  /// Creates a [TypeInfo] object from the given [TypeNode] AST node.
-  factory TypeInfo.fromAst(TypeNode ast) {
-    final isNullable = ast.isNullable;
+  /// Indicates if the type is a map.
+  final bool isMap;
 
-    final isList = ast.typeName is TypeNameNode &&
-        (ast.typeName as TypeNameNode).name == 'List';
+  /// Indicates if the type is a list.
+  final bool isList;
 
-    final isMap = ast.typeName is TypeNameNode &&
-        (ast.typeName as TypeNameNode).name == 'Map';
+  /// Indicates if the type is a generic type.
+  final bool isGeneric;
 
-    final isGeneric = ast.typeArguments != null;
+  /// The generic type arguments of the type.
+  final List<TypeInfo> generics;
 
-    String typeName;
-    List<TypeInfo> genericArguments = [];
+  /// Creates a new instance of the [TypeInfo] class.
+  TypeInfo(this.name, this.isNullable, this.generics)
+      : isMap = name == 'Map' || name == '_Map' && generics.length == 2,
+        isList = name == 'List' || name == '_List' && generics.length == 1,
+        isGeneric = generics.isNotEmpty;
+}
 
-    if (ast.typeName is TypeNameNode) {
-      typeName = (ast.typeName as TypeNameNode).name;
-    } else {
-      throw JsonDeserializationException('Unexpected type name');
+/// The Dart parser responsible for parsing Dart code.
+class DartParser {
+  static final _typesCache = <String, TypeInfo>{};
+
+  final DartLexer _lexer;
+  late Token _currentToken;
+
+  /// Creates a new instance of the [DartParser] class.
+  DartParser(String input) : _lexer = DartLexer(input) {
+    _currentToken = _lexer.getNextToken();
+  }
+
+  /// Parses a function and returns its information.
+  static FunctionInfo parseFunction(Function function) {
+    return DartParser(function.toString())._parseFunction();
+  }
+
+  /// Parses a type and returns its information.
+  static TypeInfo parseType(String typeName) {
+    if (_typesCache.containsKey(typeName)) {
+      return _typesCache[typeName]!;
     }
 
-    if (isGeneric) {
-      if (ast.typeArguments is TypeListNode) {
-        genericArguments = (ast.typeArguments as TypeListNode)
-            .types
-            .map((arg) => TypeInfo.fromAst(arg as TypeNode))
-            .toList();
-      } else {
-        throw JsonDeserializationException('Unexpected type arguments');
-      }
-    }
+    final typeInfo = DartParser(typeName)._parseType();
+    _typesCache[typeName] = typeInfo;
 
-    return TypeInfo(
-      isNullable: isNullable,
-      isList: isList,
-      isMap: isMap,
-      isGeneric: isGeneric,
-      name: typeName,
-      genericArguments: genericArguments,
-      type: ast.toString(),
+    return typeInfo;
+  }
+
+  /// Parses a function and returns its information.
+  FunctionInfo _parseFunction() {
+    _eat(TokenType.identifier, 'Closure');
+    _eat(TokenType.colon);
+
+    final parameters = _parseParameters();
+
+    _eat(TokenType.equals);
+    _eat(TokenType.greaterThan);
+
+    final type = _parseType();
+
+    return FunctionInfo(
+      type,
+      parameters.positional,
+      parameters.optional,
+      parameters.named,
     );
   }
 
-  /// Get the number of list types in the hierarchy.
-  int countListTypes() {
-    int count = 0;
+  /// Parses the parameters of a function and returns their information.
+  Parameters _parseParameters() {
+    _eat(TokenType.lParen);
 
-    if (isList) {
-      count++;
-      count += genericArguments[0].countListTypes();
+    if (_peek(TokenType.rParen)) {
+      _eat(TokenType.rParen);
+      return Parameters([], [], []);
     }
 
-    return count;
+    if (_peek(TokenType.lCurlyBracket)) {
+      _eat(TokenType.lCurlyBracket);
+
+      final namedParameters = _parseNamedParameters();
+
+      _eat(TokenType.rCurlyBracket);
+      _eat(TokenType.rParen);
+
+      return Parameters([], [], namedParameters);
+    }
+
+    if (_peek(TokenType.lSquareBracket)) {
+      _eat(TokenType.lSquareBracket);
+
+      final optionalParameters = _parseOptionalParameters();
+
+      _eat(TokenType.rSquareBracket);
+      _eat(TokenType.rParen);
+
+      return Parameters([], optionalParameters, []);
+    }
+
+    final positionalParameters = _parsePositionalParameters();
+
+    List<TypeInfo> optionalParameters = [];
+
+    if (_peek(TokenType.lSquareBracket)) {
+      _eat(TokenType.lSquareBracket);
+
+      optionalParameters = _parseOptionalParameters();
+
+      _eat(TokenType.rSquareBracket);
+    }
+
+    List<PropertyInfo> namedParameters = [];
+
+    if (_peek(TokenType.lCurlyBracket)) {
+      _eat(TokenType.lCurlyBracket);
+
+      namedParameters = _parseNamedParameters();
+
+      _eat(TokenType.rCurlyBracket);
+    }
+
+    _eat(TokenType.rParen);
+
+    return Parameters(
+      positionalParameters,
+      optionalParameters,
+      namedParameters,
+    );
   }
 
-  /// Get a string representation of the type information.
-  @override
-  String toString() => type;
+  /// Parses the positional parameters of a function and returns their information.
+  List<TypeInfo> _parsePositionalParameters() {
+    final parameters = [_parseType()];
+
+    while (_peek(TokenType.comma)) {
+      _eat(TokenType.comma);
+
+      if (_peek(TokenType.lCurlyBracket) || _peek(TokenType.lSquareBracket)) {
+        continue;
+      }
+
+      parameters.add(_parseType());
+    }
+
+    return parameters;
+  }
+
+  /// Parses the optional parameters of a function and returns their information.
+  List<TypeInfo> _parseOptionalParameters() {
+    final parameters = [_parseType()];
+
+    while (_peek(TokenType.comma)) {
+      _eat(TokenType.comma);
+      parameters.add(_parseType());
+    }
+
+    return parameters;
+  }
+
+  /// Parses the named parameters of a function and returns their information.
+  List<PropertyInfo> _parseNamedParameters() {
+    final parameters = [_parseNamedParameter()];
+
+    while (_peek(TokenType.comma)) {
+      _eat(TokenType.comma);
+      parameters.add(_parseNamedParameter());
+    }
+
+    return parameters;
+  }
+
+  /// Parses a named parameter and returns its information.
+  PropertyInfo _parseNamedParameter() {
+    var isRequired = false;
+
+    if (_peek(TokenType.identifier, 'required')) {
+      _eat(TokenType.identifier, 'required');
+      isRequired = true;
+    }
+
+    final type = _parseType();
+    final identifier = _parseIdentifier();
+
+    return PropertyInfo(
+      type,
+      identifier,
+      isRequired,
+    );
+  }
+
+  /// Parses a type and returns its information.
+  TypeInfo _parseType() {
+    final identifier = _parseIdentifier();
+
+    if (_peek(TokenType.questionMark)) {
+      _eat(TokenType.questionMark);
+      return TypeInfo(identifier, true, []);
+    }
+
+    if (_peek(TokenType.lessThan)) {
+      _eat(TokenType.lessThan);
+      final genericArguments = _parseGenericArguments();
+      _eat(TokenType.greaterThan);
+
+      if (_peek(TokenType.questionMark)) {
+        _eat(TokenType.questionMark);
+        return TypeInfo(identifier, true, genericArguments);
+      }
+
+      return TypeInfo(identifier, false, genericArguments);
+    }
+
+    return TypeInfo(identifier, false, []);
+  }
+
+  /// Parses the generic arguments of a type and returns their information.
+  List<TypeInfo> _parseGenericArguments() {
+    var types = [_parseType()];
+
+    while (_peek(TokenType.comma)) {
+      _eat(TokenType.comma);
+      types.add(_parseType());
+    }
+
+    return types;
+  }
+
+  /// Parses an identifier and returns its value.
+  String _parseIdentifier() {
+    final token = _currentToken;
+    _eat(TokenType.identifier);
+    return token.lexeme;
+  }
+
+  /// Checks if the current token matches the specified type and lexeme.
+  bool _peek(TokenType type, [String? lexeme]) {
+    return _currentToken.type == type &&
+        (lexeme == null || _currentToken.lexeme == lexeme);
+  }
+
+  /// Consumes the current token if it matches the specified type and lexeme.
+  _eat(TokenType type, [String? lexeme]) {
+    if (!_peek(type, lexeme)) {
+      throw DartParserException(
+        'Expected $type, but found $_currentToken',
+      );
+    }
+
+    _currentToken = _lexer.getNextToken();
+  }
 }

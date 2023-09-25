@@ -1,88 +1,114 @@
 import 'dart:convert';
 
-import 'package:json_serializer/src/generic_type.dart';
-
 import 'converter.dart';
 import 'exception.dart';
+import 'generic_type.dart';
 import 'parser.dart';
 import 'user_type.dart';
 
-/// Parses a JSON value into an object based on its type.
-///
-/// Given the [value], this function determines the appropriate [JsonConverter]
-/// to use for the conversion based on the provided [type] and [options]. If the
-/// [value] is `null`, it behaves differently depending on the nullability of
-/// the [type]: If [type] is non-nullable, a [JsonDeserializationException] is thrown
-/// with the message "A null value cannot be used for a non-nullable type." If
-/// [type] is nullable, the appropriate converter's `convertNull` method is
-/// called.
-///
-/// Returns the converted object or `null` if [value] is `null` and [type] is
-/// nullable.
-Object? parse(Object? value, TypeInfo type, JsonSerializerOptions options) {
+/// Encodes the given [value] of type [Object] into JSON using the provided [type],
+/// [options], and registered converters. Returns the encoded JSON object.
+Object? encode(
+  Object? value,
+  TypeInfo type,
+  JsonSerializerOptions options,
+) {
+  final converter = options.getConverter(type);
+  return converter.write(value, type, options);
+}
+
+/// Decodes the given [value] of type [Object] from JSON using the provided [type],
+/// [options], and registered converters. Returns the decoded object.
+Object? decode(
+  Object? value,
+  TypeInfo type,
+  JsonSerializerOptions options,
+) {
   final converter = options.getConverter(type);
 
   if (!type.isNullable && value == null) {
-    throw JsonDeserializationException(
-        "A null value cannot be used for a non-nullable type.");
+    throw JsonSerializerException(
+      "A null value cannot be used for a non-nullable type.",
+    );
   }
 
   if (type.isNullable && value == null) {
-    return converter.convertNull(value, type, options);
+    return converter.readNull(value, type, options);
   }
 
-  return converter.convert(value, type, options);
+  return converter.read(value, type, options);
 }
 
-/// A class representing options for JSON serialization/deserialization.
+/// An abstract class that represents a serializable object.
+abstract class Serializable {
+  /// Converts the object to a JSON-compatible [Map] representation.
+  Map<String, dynamic> toMap();
+}
+
+/// Options for the JSON serializer.
 class JsonSerializerOptions {
-  final List<GenericType> types = defaultUserTypes;
+  /// The list of user-defined types.
+  final List<GenericType> types;
 
-  final List<JsonConverter> converters = defaultConverters;
+  /// The list of registered converters.
+  final List<JsonConverter> converters;
 
+  /// Creates a new instance of [JsonSerializerOptions].
   JsonSerializerOptions({
-    List<GenericType> types = const [],
-    List<JsonConverter> converters = const [],
-  }) {
-    this.types.addAll(types);
-    this.converters.addAll(converters);
-  }
+    this.types = const [],
+    this.converters = const [],
+  });
 
-  /// Get the converter for a specific type.
-  ///
-  /// Returns the appropriate [JsonConverter] for the given [type] based on the
-  /// registered converters in [converters].
-  JsonConverter getConverter(TypeInfo type) {
-    return converters.firstWhere((x) => x.canConvert(type));
-  }
-
-  /// Get the user-defined type information for a specific type.
-  ///
-  /// Returns the [UserType] information for the given [type] based on the
-  /// registered user types in [types].
-  GenericType getGenericType(TypeInfo type) {
-    return types.firstWhere((x) => x.name == type.name);
-  }
-}
-
-/// A class for serializing and deserializing JSON.
-class JsonSerializer {
-  static var options = JsonSerializerOptions();
-
-  /// Deserialize JSON into an object of type T.
-  ///
-  /// Takes a [json] string as input, attempts to parse it using `jsonDecode`,
-  /// and then uses [parse] to convert it into an object of type [T]. If any
-  /// exceptions occur during this process, a [JsonDeserializationException] is
-  /// thrown with the appropriate error message.
-  ///
-  /// Throws a [JsonDeserializationException] with the message "JSON string is null or empty" if
-  /// [json] is `null` or an empty string.
-  static T deserialize<T>(String? json) {
-    if (json == null || json.isEmpty) {
-      throw JsonDeserializationException("JSON string is null or empty.");
+  /// Merges the current [JsonSerializerOptions] with the provided [options].
+  /// Returns a new [JsonSerializerOptions] instance.
+  JsonSerializerOptions merge(JsonSerializerOptions? options) {
+    if (options == null) {
+      return JsonSerializerOptions(
+        types: [...types],
+        converters: [...converters],
+      );
     }
 
-    return parse(jsonDecode(json), parseType<T>(), options) as T;
+    return JsonSerializerOptions(
+      types: [...types, ...options.types],
+      converters: [...converters, ...options.converters],
+    );
+  }
+
+  /// Retrieves the appropriate [JsonConverter] for the given [type].
+  JsonConverter getConverter(TypeInfo type) {
+    return converters.where((x) => x.canConvert(type)).firstOrNull ??
+        defaultConverters.firstWhere((x) => x.canConvert(type));
+  }
+
+  /// Retrieves the appropriate [GenericType] for the given [type].
+  GenericType getGenericType(TypeInfo type) {
+    return types.where((x) => x.name == type.name).firstOrNull ??
+        defaultUserTypes.firstWhere((x) => x.name == type.name);
+  }
+}
+
+/// A class that provides JSON serialization and deserialization functionality.
+class JsonSerializer {
+  /// The default [JsonSerializerOptions].
+  static var options = JsonSerializerOptions();
+
+  /// Serializes the given [object] into a JSON string using the provided [options].
+  /// Returns the serialized JSON string.
+  static String serialize(Object? object, [JsonSerializerOptions? options]) {
+    final opts = JsonSerializer.options.merge(options);
+
+    return jsonEncode(object, toEncodable: (value) {
+      final type = DartParser.parseType(value.runtimeType.toString());
+      return encode(value, type, opts);
+    });
+  }
+
+  /// Deserializes the given [json] string into an object of type [T] using the provided [options].
+  /// Returns the deserialized object.
+  static T deserialize<T>(String json, [JsonSerializerOptions? options]) {
+    final opts = JsonSerializer.options.merge(options);
+    final type = DartParser.parseType(T.toString());
+    return decode(jsonDecode(json), type, opts) as T;
   }
 }

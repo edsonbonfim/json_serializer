@@ -1,34 +1,27 @@
-/// This library provides JSON deserialization functionality using a [JsonSerializer].
+/// This library provides JSON serialization and deserialization functionality.
 library json_serialization;
 
-import 'src/exception.dart';
 import 'src/json_serializer_base.dart';
 
 export 'src/converter.dart' show JsonConverter;
 export 'src/enum_type.dart' show EnumType;
-export 'src/exception.dart' show JsonDeserializationException;
+export 'src/exception.dart' show JsonSerializerException;
 export 'src/json_serializer_base.dart'
-    show JsonSerializer, JsonSerializerOptions;
+    show Serializable, JsonSerializer, JsonSerializerOptions;
 export 'src/user_type.dart' show UserType;
 
-/// Deserialize JSON into an object of type `T`.
+/// Serializes the given [object] to a JSON string.
 ///
-/// Takes a JSON [String] and returns an object of type `T` by utilizing the
-/// [JsonSerializer.deserialize] method.
+/// Optionally, you can provide [options] to customize the serialization process.
+/// Returns the JSON string representation of the [object].
+String serialize(Object? object, [JsonSerializerOptions? options]) {
+  return JsonSerializer.serialize(object, options);
+}
+
+/// Deserializes the given [json] string to an object of type [T].
 ///
-/// Throws a [JsonDeserializationException] if there is an issue with the
-/// deserialization process, such as invalid JSON format or incompatible types.
-///
-/// If the input JSON is `null`, and `T` is not nullable, an error will be thrown.
-///
-/// Example usage:
-///
-/// ```dart
-/// final jsonString = '{"name": "John", "age": 30}';
-/// final person = deserialize<Person>(jsonString);
-/// print(person.name); // Output: John
-/// print(person.age); // Output: 30
-/// ```
-T deserialize<T>(String? json) {
-  return JsonSerializer.deserialize<T>(json);
+/// Optionally, you can provide [options] to customize the deserialization process.
+/// Returns the deserialized object of type [T].
+T deserialize<T>(String json, [JsonSerializerOptions? options]) {
+  return JsonSerializer.deserialize<T>(json, options);
 }
