@@ -107,8 +107,9 @@ class JsonSerializer {
   /// Deserializes the given [json] string into an object of type [T] using the provided [options].
   /// Returns the deserialized object.
   static T deserialize<T>(String json, [JsonSerializerOptions? options]) {
+    final className = T.toString();
     final opts = JsonSerializer.options.merge(options);
-    final type = DartParser.parseType(T.toString());
+    final type = DartParser.parseType(className);
     return decode(jsonDecode(json), type, opts) as T;
   }
 }

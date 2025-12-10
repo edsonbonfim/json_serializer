@@ -208,7 +208,8 @@ class DartParser {
 
   /// Parses a function and returns its information.
   static FunctionInfo parseFunction(Function function) {
-    return DartParser(function.toString())._parseFunction();
+    var constructorString = function.runtimeType.toString();
+    return DartParser(constructorString)._parseFunction();
   }
 
   /// Parses a type and returns its information.
@@ -225,9 +226,6 @@ class DartParser {
 
   /// Parses a function and returns its information.
   FunctionInfo _parseFunction() {
-    _eat(TokenType.identifier, 'Closure');
-    _eat(TokenType.colon);
-
     final parameters = _parseParameters();
 
     _eat(TokenType.equals);
