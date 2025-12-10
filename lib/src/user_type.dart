@@ -2,9 +2,14 @@ import 'generic_type.dart';
 import 'parser.dart';
 
 /// Define a default user-defined type class.
+///
+/// This class is used internally as a placeholder for default type constructors.
 class DefaultUserType {}
 
 /// A list of default user-defined types.
+///
+/// These types are automatically registered and available for JSON serialization
+/// without requiring explicit registration.
 final defaultUserTypes = <GenericType>[
   BigIntType(),
   BoolType(),
@@ -20,14 +25,25 @@ final defaultUserTypes = <GenericType>[
   ListType(),
 ];
 
-/// Represents a user-defined type.
+/// Represents a user-defined type for JSON serialization.
+///
+/// This class allows you to register custom types with the JSON serializer.
+/// The type is defined by a constructor function that will be called during
+/// deserialization to create instances of the type.
+///
+/// @typeparam [T] The type that this UserType represents.
 class UserType<T> extends GenericType<T> {
+  /// The constructor function for this user type.
   final Function function;
+
+  /// The parsed function information containing parameter details.
   final FunctionInfo info;
 
   /// Creates a new instance of the [UserType] class.
   ///
-  /// The [function] parameter is the user-defined function associated with the type.
+  /// @param [function] The constructor function associated with the type.
+  ///   This function will be called during deserialization with named parameters
+  ///   extracted from the JSON.
   UserType(this.function) : info = DartParser.parseFunction(function);
 }
 
@@ -93,18 +109,22 @@ class DynamicType extends UserType<dynamic> {
 
 /// Represents a user-defined type for [Map].
 class MapType extends UserType<Map<String, dynamic>> {
+  static const String _typeName = 'Map';
+
   /// Creates a new instance of the [MapType] class.
   MapType() : super(DefaultUserType.new);
 
   @override
-  String get name => "Map";
+  String get name => _typeName;
 }
 
 /// Represents a user-defined type for [List].
 class ListType extends UserType<List> {
+  static const String _typeName = 'List';
+
   /// Creates a new instance of the [ListType] class.
   ListType() : super(DefaultUserType.new);
 
   @override
-  String get name => "List";
+  String get name => _typeName;
 }
