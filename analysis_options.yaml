@@ -19,9 +19,11 @@ include: package:lints/recommended.yaml
 #   rules:
 #     - camel_case_types
 
-# analyzer:
-#   exclude:
-#     - path/to/excluded/files/**
+analyzer:
+  errors:
+    # Allows non-camelCase identifiers in test and example files
+    # that demonstrate different naming conventions
+    non_constant_identifier_names: ignore
 
 # For more information about the core and recommended set of lints, see
 # https://dart.dev/go/core-lints

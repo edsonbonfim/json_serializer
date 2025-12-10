@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'converter.dart';
 import 'exception.dart';
 import 'generic_type.dart';
+import 'naming_convention.dart';
 import 'parser.dart';
 import 'user_type.dart';
 
@@ -53,11 +54,20 @@ class JsonSerializerOptions {
   /// The list of registered converters.
   final List<JsonConverter> converters;
 
+  /// The list of supported naming conventions.
+  final List<NamingConvention> namingConventions;
+
+  /// The naming convention to use for JSON property names.
+  /// If null, the convention will be auto-detected from the JSON.
+  final NamingConvention? jsonNamingConvention;
+
   /// Creates a new instance of [JsonSerializerOptions].
   JsonSerializerOptions({
     this.types = const [],
     this.converters = const [],
-  });
+    List<NamingConvention>? namingConventions,
+    this.jsonNamingConvention,
+  }) : namingConventions = namingConventions ?? defaultNamingConventions;
 
   /// Merges the current [JsonSerializerOptions] with the provided [options].
   /// Returns a new [JsonSerializerOptions] instance.
@@ -66,12 +76,17 @@ class JsonSerializerOptions {
       return JsonSerializerOptions(
         types: [...types],
         converters: [...converters],
+        namingConventions: [...namingConventions],
+        jsonNamingConvention: jsonNamingConvention,
       );
     }
 
     return JsonSerializerOptions(
       types: [...types, ...options.types],
       converters: [...converters, ...options.converters],
+      namingConventions: [...namingConventions, ...options.namingConventions],
+      jsonNamingConvention:
+          options.jsonNamingConvention ?? jsonNamingConvention,
     );
   }
 
@@ -85,6 +100,53 @@ class JsonSerializerOptions {
   GenericType getGenericType(TypeInfo type) {
     return types.where((x) => x.name == type.name).firstOrNull ??
         defaultUserTypes.firstWhere((x) => x.name == type.name);
+  }
+
+  /// Detects the naming convention used in a JSON object.
+  /// Returns the first matching convention, or null if no match is found.
+  NamingConvention? detectNamingConvention(Map<dynamic, dynamic> json) {
+    if (json.isEmpty) return null;
+
+    // Count matches for each convention
+    final scores = <NamingConvention, int>{};
+    for (var convention in namingConventions) {
+      scores[convention] = 0;
+    }
+
+    for (var key in json.keys) {
+      if (key is! String) continue;
+
+      for (var convention in namingConventions) {
+        if (convention.matches(key)) {
+          scores[convention] = (scores[convention] ?? 0) + 1;
+        }
+      }
+    }
+
+    // Return the convention with the highest score
+    var maxScore = 0;
+    NamingConvention? bestConvention;
+    scores.forEach((convention, score) {
+      if (score > maxScore) {
+        maxScore = score;
+        bestConvention = convention;
+      }
+    });
+
+    return bestConvention;
+  }
+
+  /// Converts a property name from JSON naming convention to camelCase.
+  String convertFromJson(String jsonPropertyName, Map<dynamic, dynamic> json) {
+    final convention = jsonNamingConvention ?? detectNamingConvention(json);
+    if (convention == null) return jsonPropertyName;
+    return convention.toCamelCase(jsonPropertyName);
+  }
+
+  /// Converts a property name from camelCase to JSON naming convention.
+  String convertToJson(String camelCasePropertyName) {
+    final convention = jsonNamingConvention ?? CamelCaseConvention();
+    return convention.fromCamelCase(camelCasePropertyName);
   }
 }
 

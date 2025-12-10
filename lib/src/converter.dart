@@ -317,6 +317,47 @@ class DynamicConverter extends JsonConverter<dynamic> {
   }
 }
 
+/// Finds a value in the map by converting the parameter name using naming conventions.
+/// Returns the value if found, or null otherwise.
+dynamic _findValueInMap(
+  Map values,
+  String paramName,
+  JsonSerializerOptions options,
+) {
+  if (values.containsKey(paramName)) {
+    return values[paramName];
+  }
+
+  if (options.jsonNamingConvention != null) {
+    final normalizedParamName = _normalizePropertyName(paramName, options);
+    final jsonKey = options.jsonNamingConvention!.fromCamelCase(normalizedParamName);
+    if (values.containsKey(jsonKey)) {
+      return values[jsonKey];
+    }
+  }
+
+  final normalizedParamName = _normalizePropertyName(paramName, options);
+
+  for (var convention in options.namingConventions) {
+    final jsonKey = convention.fromCamelCase(normalizedParamName);
+    if (values.containsKey(jsonKey)) {
+      return values[jsonKey];
+    }
+  }
+
+  return null;
+}
+
+String _normalizePropertyName(String propertyName, JsonSerializerOptions options) {
+  for (var convention in options.namingConventions) {
+    if (convention.matches(propertyName)) {
+      return convention.toCamelCase(propertyName);
+    }
+  }
+
+  return propertyName;
+}
+
 /// A JSON converter for generic types.
 /// This converter handles the serialization and deserialization of generic types.
 class GenericTypeConverter extends JsonConverter {
@@ -357,16 +398,15 @@ class GenericTypeConverter extends JsonConverter {
       final args = <Symbol, dynamic>{};
 
       for (var param in genericType.info.named) {
-        if (param.isRequired &&
-            !param.type.isNullable &&
-            values[param.name] == null) {
+        final rawValue = _findValueInMap(values, param.name, options);
+
+        if (param.isRequired && !param.type.isNullable && rawValue == null) {
           throw JsonSerializerException(
             "Error converting user-defined type '$type' for parameter '${param.name}' to type '${param.type}'",
           );
         }
 
-        if (values.containsKey(param.name)) {
-          final rawValue = values[param.name];
+        if (rawValue != null) {
           args[Symbol(param.name)] = decode(rawValue, param.type, options);
         }
       }
