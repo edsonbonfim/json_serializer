@@ -8,6 +8,15 @@ export 'src/enum_type.dart' show EnumType;
 export 'src/exception.dart' show JsonSerializerException;
 export 'src/json_serializer_base.dart'
     show Serializable, JsonSerializer, JsonSerializerOptions;
+export 'src/naming_convention.dart'
+    show
+        NamingConvention,
+        CamelCaseConvention,
+        SnakeCaseConvention,
+        PascalCaseConvention,
+        KebabCaseConvention,
+        UpperCaseConvention,
+        LowerCaseConvention;
 export 'src/user_type.dart' show UserType;
 
 /// Serializes the given [object] to a JSON string.

@@ -1,10 +1,10 @@
 name: json_serializer
 description: A versatile Dart package for effortless JSON serialization and deserialization without the need for code generation or reflection.
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/edsonbonfim/json_serializer
 
 environment:
-  sdk: ^3.1.1
+  sdk: ">=3.0.0 <4.0.0"
 
 dev_dependencies:
   lints: ^2.0.0
