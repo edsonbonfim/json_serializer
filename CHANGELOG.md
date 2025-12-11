@@ -2,6 +2,12 @@
 
 All release notes for the `json_serializer` library will be documented on this page.
 
+## [0.3.1] - 2025-01-XX
+
+### Changed
+
+- Renamed `docs` directory to `doc` to comply with Pub layout conventions.
+
 ## [0.3.0] - 2025-12-10
 
 ### Added
