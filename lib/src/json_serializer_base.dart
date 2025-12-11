@@ -1,8 +1,8 @@
-import 'dart:convert';
-
 import 'converter.dart';
 import 'exception.dart';
 import 'generic_type.dart';
+import 'json_parser_json.dart';
+import 'json_writer.dart';
 import 'naming_convention.dart';
 import 'parser.dart';
 import 'user_type.dart';
@@ -256,10 +256,19 @@ class JsonSerializer {
   static String serialize(Object? object, [JsonSerializerOptions? options]) {
     final mergedOptions = JsonSerializer.options.merge(options);
 
-    return jsonEncode(object, toEncodable: (value) {
-      final type = DartParser.parseType(value.runtimeType.toString());
-      return encode(value, type, mergedOptions);
-    });
+    if (object == null) {
+      return JsonWriter.encode(null);
+    }
+
+    final typeName = object.runtimeType.toString();
+    final encoded = encode(
+      object,
+      DartParser.parseType(typeName),
+      mergedOptions,
+    );
+
+    final normalized = _normalizeForJson(encoded, mergedOptions);
+    return JsonWriter.encode(normalized);
   }
 
   /// Deserializes the given JSON string into an object of the specified type.
@@ -277,6 +286,47 @@ class JsonSerializer {
     final className = T.toString();
     final mergedOptions = JsonSerializer.options.merge(options);
     final type = DartParser.parseType(className);
-    return decode(jsonDecode(json), type, mergedOptions) as T;
+    final parsed = JsonParser(json).parse();
+    return decode(parsed, type, mergedOptions) as T;
+  }
+
+  /// Normalizes arbitrary values into JSON-compatible shapes, converting
+  /// custom objects using registered converters and recursively applying the
+  /// same rules to collections.
+  ///
+  /// @param [value] The value to normalize.
+  /// @param [options] Serializer options for converter lookup.
+  /// @returns A JSON-compatible value.
+  static Object? _normalizeForJson(
+    Object? value,
+    JsonSerializerOptions options,
+  ) {
+    if (value == null ||
+        value is bool ||
+        value is num ||
+        value is String) {
+      return value;
+    }
+
+    if (value is List) {
+      return value
+          .map((item) => _normalizeForJson(item, options))
+          .toList();
+    }
+
+    if (value is Map) {
+      return value.map((key, val) {
+        if (key is! String) {
+          throw JsonSerializerException(
+            'JSON object keys must be strings. Received key: $key',
+          );
+        }
+        return MapEntry(key, _normalizeForJson(val, options));
+      });
+    }
+
+    final nestedType = DartParser.parseType(value.runtimeType.toString());
+    final converted = encode(value, nestedType, options);
+    return _normalizeForJson(converted, options);
   }
 }

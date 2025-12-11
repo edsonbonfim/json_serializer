@@ -80,7 +80,7 @@ class BoolConverter extends JsonConverter<bool> {
 
   @override
   Object? write(bool value, TypeInfo type, JsonSerializerOptions options) {
-    return value.toString();
+    return value;
   }
 
   @override
@@ -107,7 +107,7 @@ class StringConverter extends JsonConverter<String> {
 
   @override
   Object? write(String value, TypeInfo type, JsonSerializerOptions options) {
-    return value.toString();
+    return value;
   }
 
   @override
@@ -182,7 +182,7 @@ class DoubleConverter extends JsonConverter<double> {
 
   @override
   Object? write(double value, TypeInfo type, JsonSerializerOptions options) {
-    return value.toString();
+    return value;
   }
 
   @override
@@ -209,7 +209,7 @@ class NumConverter extends JsonConverter<num> {
 
   @override
   Object? write(num value, TypeInfo type, JsonSerializerOptions options) {
-    return value.toString();
+    return value;
   }
 
   @override
@@ -263,7 +263,7 @@ class IntConverter extends JsonConverter<int> {
 
   @override
   Object? write(int value, TypeInfo type, JsonSerializerOptions options) {
-    return value.toString();
+    return value;
   }
 
   @override
@@ -591,17 +591,23 @@ class GenericTypeConverter extends JsonConverter {
         );
       }
 
-      if (rawValue != null) {
-        try {
-          args[Symbol(param.name)] = decode(rawValue, param.type, options);
-        } catch (e) {
-          throw JsonSerializerException(
-            'Error converting parameter "${param.name}" of type "${type.name}".\n'
-            'Received value: "$rawValue" (type: ${rawValue.runtimeType})\n'
-            'Expected type: ${param.type.name}\n'
-            'Original error: $e',
-          );
+      if (rawValue == null) {
+        if (param.isRequired) {
+          // Required named parameters must be provided, even if the value is null.
+          args[Symbol(param.name)] = null;
         }
+        continue;
+      }
+
+      try {
+        args[Symbol(param.name)] = decode(rawValue, param.type, options);
+      } catch (e) {
+        throw JsonSerializerException(
+          'Error converting parameter "${param.name}" of type "${type.name}".\n'
+          'Received value: "$rawValue" (type: ${rawValue.runtimeType})\n'
+          'Expected type: ${param.type.name}\n'
+          'Original error: $e',
+        );
       }
     }
 
