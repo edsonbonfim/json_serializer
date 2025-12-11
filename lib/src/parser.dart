@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'exception.dart';
+import 'string_utils.dart';
 
 /// Represents the different types of tokens in the Dart lexer.
 enum TokenType {
@@ -77,11 +76,11 @@ final _symbolByteCodes = <int, TokenType>{
   60: TokenType.lessThan,        // '<'
 };
 
-/// The Dart lexer responsible for tokenizing input strings.
+/// Tokenizes Dart-like type strings into a stream of [Token]s.
 ///
-/// This class breaks down a string into a sequence of tokens that can be
-/// parsed by the DartParser. Optimized using Uint8List and ByteData for
-/// maximum performance with zero-copy views.
+/// Uses `StringView` with `ByteData`/`Uint16List` views to avoid copies and
+/// operate directly on UTF-16 code units, making it suitable for hot paths in
+/// the parser.
 class DartLexer {
   /// Character code constants for character classification.
   static const int _newlineCode = 10; // \n
@@ -101,75 +100,74 @@ class DartLexer {
   static const int _ellipsisLength = 3; // "..."
   static const int _hexRadix = 16;
 
-  /// The input string to be tokenized.
   final String input;
 
-  /// The code units of the input string (cached for performance).
-  /// Using Uint16List view for efficient zero-copy access to code units.
-  late final Uint16List _inputCodeUnits;
+  late final StringView _inputView;
 
-  /// The current position in the input string.
+  late final int _inputLength;
+
   var _position = 0;
 
-  /// Creates a new instance of the [DartLexer] class.
+  /// Creates a lexer with zero-copy typed views over [input].
   ///
-  /// @param [input] The input string to tokenize.
+  /// @param [input] Raw source to tokenize.
+  /// @returns A lexer ready to emit tokens from the provided input.
   DartLexer(this.input) {
-    // Create a typed list from code units for efficient code unit-level processing
-    // This avoids repeated codeUnitAt calls and provides direct array access
-    final codeUnits = input.codeUnits;
-    _inputCodeUnits = Uint16List.fromList(codeUnits);
+    // Cria uma view tipada única (ByteData/Uint16/Uint8) para reuso sem cópia.
+    _inputView = StringView(input);
+    _inputLength = _inputView.length;
   }
 
-  /// Retrieves the next token from the input string.
+  /// Retrieves the next token from the stream.
   ///
-  /// Optimized to use code unit-level operations for maximum performance.
-  ///
-  /// @returns The next token, or an EOF token if the end of input is reached.
-  /// @throws [FormatException] if an unrecognized character is encountered.
+  /// @returns The next [Token], or an EOF token when input ends.
+  /// @throws [FormatException] When an unrecognized character is found.
   Token getNextToken() {
-    if (_position >= _inputCodeUnits.length) {
-      return Token(TokenType.eof, '');
-    }
+    while (_position < _inputLength) {
+      final codeUnit = _inputView.codeUnitAt(_position);
 
-    final codeUnit = _inputCodeUnits[_position];
-
-    if (_isWhiteSpaceCodeUnit(codeUnit)) {
-      _position++;
-      return getNextToken();
-    }
-
-    // Fast lookup using code unit (only for ASCII symbols)
-    if (codeUnit < 128) {
-      final tokenType = _symbolByteCodes[codeUnit];
-      if (tokenType != null) {
-        final symbol = String.fromCharCode(codeUnit);
+      if (_isWhiteSpaceCodeUnit(codeUnit)) {
         _position++;
-        return Token(tokenType, symbol);
-      }
-    }
-
-    if (_isIdentifierStartCodeUnit(codeUnit)) {
-      final startPos = _position;
-      
-      // Fast scan using code units
-      while (_position < _inputCodeUnits.length &&
-          _isIdentifierPartCodeUnit(_inputCodeUnits[_position])) {
-        _position++;
+        continue;
       }
 
-      // Extract identifier using substring (optimized by Dart VM)
-      final identifier = input.substring(startPos, _position);
-      return Token(TokenType.identifier, identifier);
+      // Lookup direto em byte code (apenas ASCII).
+      if (codeUnit < 128) {
+        final tokenType = _symbolByteCodes[codeUnit];
+        if (tokenType != null) {
+          _position++;
+          return Token(
+            tokenType,
+            _inputView.singleCodeUnitString(codeUnit),
+          );
+        }
+      }
+
+      if (_isIdentifierStartCodeUnit(codeUnit)) {
+        final startPos = _position++;
+
+        // Escaneia via ByteData sem tocar na String original.
+        while (_position < _inputLength &&
+            _isIdentifierPartCodeUnit(_inputView.codeUnitAt(_position))) {
+          _position++;
+        }
+
+        return Token(
+          TokenType.identifier,
+          _inputView.sliceToString(startPos, _position),
+        );
+      }
+
+      throw FormatException(_formatLexerError(codeUnit));
     }
 
-    throw FormatException(_formatLexerError(codeUnit));
+    return Token(TokenType.eof, '');
   }
 
-  /// Formats a lexer error message with context information.
+  /// Builds a formatted lexer error message with local context.
   ///
-  /// @param [codeUnit] The unrecognized code unit that caused the error.
-  /// @returns A formatted error message with context.
+  /// @param [codeUnit] The offending code unit.
+  /// @returns A detailed error string containing context and pointer.
   String _formatLexerError(int codeUnit) {
     final context = _getContext();
     final charInfo = codeUnit >= _printableCharMin && codeUnit <= _printableCharMax
@@ -181,32 +179,30 @@ class DartLexer {
         '         ${' ' * _getContextOffset()}^';
   }
 
-  /// Gets the context around the current position for error messages.
+  /// Extracts a context window around the current position.
   ///
-  /// Uses zero-copy substring view for efficiency.
-  ///
-  /// @returns A substring of the input showing context around the current position.
+  /// @returns A substring showing nearby characters for diagnostics.
   String _getContext() {
     final start = _position > _contextSize ? _position - _contextSize : 0;
-    final end = _position + _contextSize < input.length
+    final end = _position + _contextSize < _inputLength
         ? _position + _contextSize
-        : input.length;
+        : _inputLength;
 
-    var context = input.substring(start, end);
+    var context = _inputView.sliceToString(start, end);
 
     if (start > 0) {
       context = '...$context';
     }
-    if (end < input.length) {
+    if (end < _inputLength) {
       context = '$context...';
     }
 
     return context;
   }
 
-  /// Gets the offset for the error pointer in the context.
+  /// Computes the offset for the diagnostic pointer within the context window.
   ///
-  /// @returns The offset position for displaying the error pointer.
+  /// @returns The zero-based offset where the pointer should be placed.
   int _getContextOffset() {
     final start = _position > _contextSize ? _position - _contextSize : 0;
     var offset = _position - start;
@@ -218,12 +214,10 @@ class DartLexer {
     return offset;
   }
 
-  /// Checks if the given code unit represents a whitespace character.
+  /// Determines whether a code unit represents whitespace.
   ///
-  /// Optimized code unit-level check without string conversion.
-  ///
-  /// @param [codeUnit] The code unit to check.
-  /// @returns True if the code unit represents whitespace.
+  /// @param [codeUnit] The value to test.
+  /// @returns True when the code unit is whitespace.
   bool _isWhiteSpaceCodeUnit(int codeUnit) {
     return codeUnit == _newlineCode ||
         codeUnit == _carriageReturnCode ||
@@ -231,62 +225,52 @@ class DartLexer {
         codeUnit == _spaceCode;
   }
 
-  /// Checks if the given character is a whitespace character.
+  /// Determines whether a character is whitespace.
   ///
-  /// @param [character] The character to check.
-  /// @returns True if the character is whitespace (space, tab, newline, or carriage return).
+  /// @param [character] Single-character string to test.
+  /// @returns True when the character is whitespace.
   bool isWhiteSpace(String character) {
     return _isWhiteSpaceCodeUnit(character.codeUnitAt(0));
   }
 
-  /// Checks if the given code unit represents a valid identifier start character.
+  /// Checks if a code unit is a valid identifier start.
   ///
-  /// Optimized code unit-level check without string conversion.
-  ///
-  /// @param [codeUnit] The code unit to check.
-  /// @returns True if the code unit can start an identifier.
+  /// @param [codeUnit] The value to test.
+  /// @returns True when it can start an identifier.
   bool _isIdentifierStartCodeUnit(int codeUnit) {
     return (codeUnit >= _uppercaseA && codeUnit <= _uppercaseZ) ||
         (codeUnit >= _lowercaseA && codeUnit <= _lowercaseZ) ||
         (codeUnit == _underscoreCode);
   }
 
-  /// Checks if the given character is a valid identifier start character.
+  /// Checks if a character can start an identifier.
   ///
-  /// Valid start characters are uppercase letters (A-Z), lowercase letters (a-z), and underscore (_).
-  ///
-  /// @param [character] The character to check.
-  /// @returns True if the character can start an identifier.
+  /// @param [character] Single-character string to test.
+  /// @returns True when it can start an identifier.
   bool isIdentifierStart(String character) {
     return _isIdentifierStartCodeUnit(character.codeUnitAt(0));
   }
 
-  /// Checks if the given code unit represents a valid identifier part character.
+  /// Checks if a code unit is valid inside an identifier.
   ///
-  /// Optimized code unit-level check without string conversion.
-  ///
-  /// @param [codeUnit] The code unit to check.
-  /// @returns True if the code unit can be part of an identifier.
+  /// @param [codeUnit] The value to test.
+  /// @returns True when it can appear in an identifier.
   bool _isIdentifierPartCodeUnit(int codeUnit) {
     return _isIdentifierStartCodeUnit(codeUnit) || _isDigitCodeUnit(codeUnit);
   }
 
-  /// Checks if the given character is a valid identifier part character.
+  /// Checks if a character is valid inside an identifier.
   ///
-  /// Valid part characters include identifier start characters plus digits (0-9).
-  ///
-  /// @param [character] The character to check.
-  /// @returns True if the character can be part of an identifier.
+  /// @param [character] Single-character string to test.
+  /// @returns True when it can appear in an identifier.
   bool isIdentifierPart(String character) {
     return _isIdentifierPartCodeUnit(character.codeUnitAt(0));
   }
 
-  /// Checks if the given code unit represents a digit character.
+  /// Checks if a code unit represents a digit.
   ///
-  /// Optimized code unit-level check without string conversion.
-  ///
-  /// @param [codeUnit] The code unit to check.
-  /// @returns True if the code unit represents a digit (0-9).
+  /// @param [codeUnit] The value to test.
+  /// @returns True when it is in [0-9].
   bool _isDigitCodeUnit(int codeUnit) {
     return codeUnit >= _digitZero && codeUnit <= _digitNine;
   }
