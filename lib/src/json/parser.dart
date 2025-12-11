@@ -1,4 +1,4 @@
-import 'json_lexer.dart';
+import 'lexer.dart';
 
 /// Parses JSON text into Dart objects without relying on `dart:convert`.
 ///

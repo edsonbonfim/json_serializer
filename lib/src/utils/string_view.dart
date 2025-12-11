@@ -51,8 +51,7 @@ class StringView {
   ///
   /// @param [index] The zero-based code-unit position.
   /// @returns The code unit value at [index].
-  int codeUnitAt(int index) =>
-      _byteData.getUint16(index << 1, Endian.host);
+  int codeUnitAt(int index) => _byteData.getUint16(index << 1, Endian.host);
 
   /// Creates a zero-copy slice of code units as a `Uint16List` view.
   ///
@@ -92,8 +91,10 @@ class StringView {
 
   /// @returns The `ByteData` view for byte-level access.
   ByteData get byteData => _byteData;
+
   /// @returns The `Uint16List` view of code units.
   Uint16List get codeUnitsView => _codeUnits;
+
   /// @returns The `Uint8List` view over the backing buffer.
   Uint8List get bytesView => _byteView;
 }
@@ -108,7 +109,6 @@ class StringUtils {
     final ascii = value.codeUnits;
     final allAscii = ascii.every((unit) => unit < 0x80);
 
-    // ASCII: converte direto para Uint8List; UTF-8: usa encoder.
     return allAscii
         ? Uint8List.fromList(ascii)
         : Uint8List.fromList(utf8.encode(value));

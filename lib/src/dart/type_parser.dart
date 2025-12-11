@@ -1,5 +1,5 @@
-import 'exception.dart';
-import 'string_utils.dart';
+import '../errors/exception.dart';
+import '../utils/string_view.dart';
 
 /// Represents the different types of tokens in the Dart lexer.
 enum TokenType {
@@ -400,18 +400,22 @@ class TypeInfo {
 /// This class parses string representations of Dart types and function signatures
 /// into structured [TypeInfo] and [FunctionInfo] objects.
 class DartParser {
-  /// Cache for parsed types to avoid re-parsing the same type strings.
-  static final _typesCache = <String, TypeInfo>{};
-
+  // Dependencies (injected via constructor)
   /// The lexer used to tokenize the input.
   final DartLexer _lexer;
 
   /// The original input string.
   final String _input;
 
+  // Public properties
   /// The current token being processed.
   late Token _currentToken;
 
+  // Private static properties
+  /// Cache for parsed types to avoid re-parsing the same type strings.
+  static final _typesCache = <String, TypeInfo>{};
+
+  // Constants
   /// Keyword constants.
   static const String _requiredKeyword = 'required';
 

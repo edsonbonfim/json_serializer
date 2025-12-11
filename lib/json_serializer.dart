@@ -1,14 +1,14 @@
 /// This library provides JSON serialization and deserialization functionality.
 library json_serialization;
 
-import 'src/json_serializer_base.dart';
+import 'src/serialization/serializer.dart';
 
-export 'src/converter.dart' show JsonConverter;
-export 'src/enum_type.dart' show EnumType;
-export 'src/exception.dart' show JsonSerializerException;
-export 'src/json_serializer_base.dart'
+export 'src/serialization/converter.dart' show JsonConverter;
+export 'src/types/enum_type.dart' show EnumType;
+export 'src/errors/exception.dart' show JsonSerializerException;
+export 'src/serialization/serializer.dart'
     show Serializable, JsonSerializer, JsonSerializerOptions;
-export 'src/naming_convention.dart'
+export 'src/naming/convention.dart'
     show
         NamingConvention,
         CamelCaseConvention,
@@ -17,7 +17,7 @@ export 'src/naming_convention.dart'
         KebabCaseConvention,
         UpperCaseConvention,
         LowerCaseConvention;
-export 'src/user_type.dart' show UserType;
+export 'src/types/user_type.dart' show UserType;
 
 /// Serializes the given object to a JSON string.
 ///

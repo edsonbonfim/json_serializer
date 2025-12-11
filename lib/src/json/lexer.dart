@@ -1,4 +1,4 @@
-import 'string_utils.dart';
+import '../utils/string_view.dart';
 
 /// Token kinds produced by [JsonLexer] while scanning JSON text.
 enum JsonTokenType {
@@ -126,7 +126,6 @@ class JsonLexer {
         continue;
       }
 
-      // Skip whitespace outside strings.
       if (cu == _space || cu == _tab || cu == _newline || cu == _carriageReturn) {
         continue;
       }
@@ -200,7 +199,7 @@ class JsonLexer {
           ctx.column,
           _readNumber(),
         );
-      case 0x74: // t
+      case 0x74:
         return JsonToken(
           JsonTokenType.boolean,
           start,
@@ -208,7 +207,7 @@ class JsonLexer {
           ctx.column,
           _readLiteral('true', true, start),
         );
-      case 0x66: // f
+      case 0x66:
         return JsonToken(
           JsonTokenType.boolean,
           start,
@@ -216,7 +215,7 @@ class JsonLexer {
           ctx.column,
           _readLiteral('false', false, start),
         );
-      case 0x6E: // n
+      case 0x6E:
         _readLiteral('null', null, start);
         return JsonToken(JsonTokenType.nullValue, start, ctx.line, ctx.column, null);
       default:
@@ -236,7 +235,7 @@ class JsonLexer {
   }
 
   String _readString() {
-    _position++; // skip opening quote
+    _position++;
     final buffer = StringBuffer();
 
     while (_position < _length) {
@@ -317,13 +316,11 @@ class JsonLexer {
   num _readNumber() {
     final start = _position;
 
-    // Sign
     if (_view.codeUnitAt(_position) == _minus) {
       _position++;
       _ensureDigit('Expected digit after "-"');
     }
 
-    // Integer part
     if (_view.codeUnitAt(_position) == _zero) {
       _position++;
       if (_position < _length) {
@@ -336,14 +333,12 @@ class JsonLexer {
       _consumeDigits();
     }
 
-    // Fraction
     if (_position < _length && _view.codeUnitAt(_position) == _dot) {
       _position++;
       _ensureDigit('Expected digit after decimal point');
       _consumeDigits();
     }
 
-    // Exponent
     if (_position < _length) {
       final cu = _view.codeUnitAt(_position);
       if (cu == _upperE || cu == _lowerE) {
@@ -441,14 +436,13 @@ class JsonLexer {
     );
   }
 
-  /// Exposes line/column context for a given offset (used by parser diagnostics).
   _ErrorContext contextForOffset(int offset) => _contextForOffset(offset);
 
   /// Exposes minified single-line context for diagnostics (always one line).
   ///
   /// @param [offset] Offset in the original source.
   /// @returns Snippet, caret index, and original line/column info.
-  _MinifiedContext _minifiedContext(int offset) {
+  MinifiedContext _minifiedContext(int offset) {
     final minOffset = offset < _origToMin.length ? _origToMin[offset] : _minified.length;
 
     final snippetStart = minOffset - _contextRadius < 0 ? 0 : minOffset - _contextRadius;
@@ -457,13 +451,15 @@ class JsonLexer {
     final snippet = _minified.substring(snippetStart, snippetEnd);
     final caret = minOffset - snippetStart;
 
-    // Compute line/column based on original text for accuracy.
     final ctx = _contextForOffset(offset);
-    return _MinifiedContext(snippet, caret < 0 ? 0 : caret, ctx.line, ctx.column);
+    return MinifiedContext(snippet, caret < 0 ? 0 : caret, ctx.line, ctx.column);
   }
 
   /// Exposes minified single-line context for parser diagnostics.
-  _MinifiedContext minifiedContextForOffset(int offset) => _minifiedContext(offset);
+  ///
+  /// @param [offset] Offset in the original source.
+  /// @returns Snippet, caret index, and original line/column info.
+  MinifiedContext minifiedContextForOffset(int offset) => _minifiedContext(offset);
 }
 
 class _ErrorContext {
@@ -482,11 +478,25 @@ class _ErrorContext {
   );
 }
 
-class _MinifiedContext {
+/// Context information for minified JSON error diagnostics.
+class MinifiedContext {
+  /// The snippet of JSON text around the error.
   final String snippet;
+
+  /// The caret position within the snippet.
   final int snippetCaret;
+
+  /// The line number in the original source (1-based).
   final int line;
+
+  /// The column number in the original source (1-based).
   final int column;
 
-  const _MinifiedContext(this.snippet, this.snippetCaret, this.line, this.column);
+  /// Creates a minified context instance.
+  ///
+  /// @param [snippet] The snippet of JSON text.
+  /// @param [snippetCaret] The caret position within the snippet.
+  /// @param [line] The line number (1-based).
+  /// @param [column] The column number (1-based).
+  const MinifiedContext(this.snippet, this.snippetCaret, this.line, this.column);
 }

@@ -1,11 +1,15 @@
-import 'converter.dart';
-import 'exception.dart';
-import 'generic_type.dart';
-import 'json_parser_json.dart';
-import 'json_writer.dart';
-import 'naming_convention.dart';
-import 'parser.dart';
-import 'user_type.dart';
+import 'converter.dart' show defaultConverters, JsonConverter;
+import '../errors/exception.dart';
+import '../types/generic_type.dart';
+import '../json/parser.dart' show JsonParser;
+import '../json/writer.dart' show JsonWriter;
+import '../naming/convention.dart'
+    show
+        NamingConvention,
+        CamelCaseConvention,
+        defaultNamingConventions;
+import '../dart/type_parser.dart' show DartParser, TypeInfo;
+import '../types/user_type.dart' show defaultUserTypes;
 
 /// Encodes the given value into JSON format using the provided type information and options.
 ///

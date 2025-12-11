@@ -1,12 +1,12 @@
 import 'generic_type.dart';
-import 'parser.dart';
+import '../dart/type_parser.dart';
 
-/// Define a default user-defined type class.
+/// Default user-defined type class.
 ///
 /// This class is used internally as a placeholder for default type constructors.
 class DefaultUserType {}
 
-/// A list of default user-defined types.
+/// Default user-defined types.
 ///
 /// These types are automatically registered and available for JSON serialization
 /// without requiring explicit registration.
@@ -39,7 +39,7 @@ class UserType<T> extends GenericType<T> {
   /// The parsed function information containing parameter details.
   final FunctionInfo info;
 
-  /// Creates a new instance of the [UserType] class.
+  /// Creates a new instance of [UserType].
   ///
   /// @param [function] The constructor function associated with the type.
   ///   This function will be called during deserialization with named parameters
@@ -47,82 +47,82 @@ class UserType<T> extends GenericType<T> {
   UserType(this.function) : info = DartParser.parseFunction(function);
 }
 
-/// Represents a user-defined type for [BigInt].
+/// User-defined type for [BigInt].
 class BigIntType extends UserType<BigInt> {
-  /// Creates a new instance of the [BigIntType] class.
+  /// Creates a new instance of [BigIntType].
   BigIntType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [bool].
+/// User-defined type for [bool].
 class BoolType extends UserType<bool> {
-  /// Creates a new instance of the [BoolType] class.
+  /// Creates a new instance of [BoolType].
   BoolType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [double].
+/// User-defined type for [double].
 class DoubleType extends UserType<double> {
-  /// Creates a new instance of the [DoubleType] class.
+  /// Creates a new instance of [DoubleType].
   DoubleType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [int].
+/// User-defined type for [int].
 class IntType extends UserType<int> {
-  /// Creates a new instance of the [IntType] class.
+  /// Creates a new instance of [IntType].
   IntType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [num].
+/// User-defined type for [num].
 class NumType extends UserType<num> {
-  /// Creates a new instance of the [NumType] class.
+  /// Creates a new instance of [NumType].
   NumType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [String].
+/// User-defined type for [String].
 class StringType extends UserType<String> {
-  /// Creates a new instance of the [StringType] class.
+  /// Creates a new instance of [StringType].
   StringType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [DateTime].
+/// User-defined type for [DateTime].
 class DateTimeType extends UserType<DateTime> {
-  /// Creates a new instance of the [DateTimeType] class.
+  /// Creates a new instance of [DateTimeType].
   DateTimeType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [Uri].
+/// User-defined type for [Uri].
 class UriType extends UserType<Uri> {
-  /// Creates a new instance of the [UriType] class.
+  /// Creates a new instance of [UriType].
   UriType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [Object].
+/// User-defined type for [Object].
 class ObjectType extends UserType<Object> {
-  /// Creates a new instance of the [ObjectType] class.
+  /// Creates a new instance of [ObjectType].
   ObjectType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [dynamic].
+/// User-defined type for [dynamic].
 class DynamicType extends UserType<dynamic> {
-  /// Creates a new instance of the [DynamicType] class.
+  /// Creates a new instance of [DynamicType].
   DynamicType() : super(DefaultUserType.new);
 }
 
-/// Represents a user-defined type for [Map].
+/// User-defined type for [Map].
 class MapType extends UserType<Map<String, dynamic>> {
   static const String _typeName = 'Map';
 
-  /// Creates a new instance of the [MapType] class.
+  /// Creates a new instance of [MapType].
   MapType() : super(DefaultUserType.new);
 
   @override
   String get name => _typeName;
 }
 
-/// Represents a user-defined type for [List].
+/// User-defined type for [List].
 class ListType extends UserType<List> {
   static const String _typeName = 'List';
 
-  /// Creates a new instance of the [ListType] class.
+  /// Creates a new instance of [ListType].
   ListType() : super(DefaultUserType.new);
 
   @override

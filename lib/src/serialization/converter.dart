@@ -1,16 +1,19 @@
-/// This file contains the implementation of various JSON converters used in the JSON serialization process.
-/// Each converter is responsible for converting a specific data type to and from JSON.
-/// The converters are used by the `JsonSerializer` class to perform the serialization and deserialization operations.
-
-import 'enum_type.dart';
-import 'exception.dart';
-import 'json_serializer_base.dart';
-import 'parser.dart';
-import 'user_type.dart';
-
-/// The list of default converters used by the `JsonSerializer`.
+/// JSON converters for serialization and deserialization operations.
 ///
-/// These converters handle the serialization and deserialization of built-in Dart types.
+/// This file contains implementations of various JSON converters used in the
+/// JSON serialization process. Each converter is responsible for converting a
+/// specific data type to and from JSON format.
+
+import '../types/enum_type.dart';
+import '../errors/exception.dart';
+import 'serializer.dart';
+import '../dart/type_parser.dart';
+import '../types/user_type.dart';
+
+/// Default converters used by the JSON serializer.
+///
+/// These converters handle the serialization and deserialization of built-in
+/// Dart types. They are automatically registered and available for use.
 final defaultConverters = <JsonConverter>[
   StringConverter(),
   BoolConverter(),
@@ -27,10 +30,11 @@ final defaultConverters = <JsonConverter>[
   GenericTypeConverter(),
 ];
 
-/// The base class for all JSON converters.
+/// Base class for all JSON converters.
 ///
-/// A JSON converter is responsible for converting a specific data type to and from JSON format.
-/// Implementations must provide methods to check if they can handle a type, and to read/write values.
+/// A JSON converter is responsible for converting a specific data type to and
+/// from JSON format. Implementations must provide methods to check if they can
+/// handle a type, and to read/write values.
 ///
 /// @typeparam [T] The type that this converter handles.
 abstract class JsonConverter<T> {
@@ -66,12 +70,11 @@ abstract class JsonConverter<T> {
     if (value == null) {
       return null;
     }
-
     return read(value, type, options);
   }
 }
 
-/// A JSON converter for the `bool` data type.
+/// JSON converter for the `bool` data type.
 class BoolConverter extends JsonConverter<bool> {
   static const String _typeName = 'bool';
 
@@ -98,7 +101,7 @@ class BoolConverter extends JsonConverter<bool> {
   }
 }
 
-/// A JSON converter for the `String` data type.
+/// JSON converter for the `String` data type.
 class StringConverter extends JsonConverter<String> {
   static const String _typeName = 'String';
 
@@ -116,7 +119,7 @@ class StringConverter extends JsonConverter<String> {
   }
 }
 
-/// A JSON converter for the `BigInt` data type.
+/// JSON converter for the `BigInt` data type.
 class BigIntConverter extends JsonConverter<BigInt> {
   static const List<String> _supportedTypeNames = ['BigInt', '_BigIntImpl'];
 
@@ -143,7 +146,7 @@ class BigIntConverter extends JsonConverter<BigInt> {
   }
 }
 
-/// A JSON converter for the `DateTime` data type.
+/// JSON converter for the `DateTime` data type.
 ///
 /// Serializes DateTime values to ISO 8601 format strings.
 class DateTimeConverter extends JsonConverter<DateTime> {
@@ -173,7 +176,7 @@ class DateTimeConverter extends JsonConverter<DateTime> {
   }
 }
 
-/// A JSON converter for the `double` data type.
+/// JSON converter for the `double` data type.
 class DoubleConverter extends JsonConverter<double> {
   static const String _typeName = 'double';
 
@@ -200,7 +203,7 @@ class DoubleConverter extends JsonConverter<double> {
   }
 }
 
-/// A JSON converter for the `num` data type.
+/// JSON converter for the `num` data type.
 class NumConverter extends JsonConverter<num> {
   static const String _typeName = 'num';
 
@@ -227,7 +230,7 @@ class NumConverter extends JsonConverter<num> {
   }
 }
 
-/// A JSON converter for the `Uri` data type.
+/// JSON converter for the `Uri` data type.
 class UriConverter extends JsonConverter<Uri> {
   static const List<String> _supportedTypeNames = ['Uri', '_SimpleUri'];
 
@@ -254,7 +257,7 @@ class UriConverter extends JsonConverter<Uri> {
   }
 }
 
-/// A JSON converter for the `int` data type.
+/// JSON converter for the `int` data type.
 class IntConverter extends JsonConverter<int> {
   static const String _typeName = 'int';
 
@@ -281,9 +284,10 @@ class IntConverter extends JsonConverter<int> {
   }
 }
 
-/// A JSON converter for the `Map` data type.
+/// JSON converter for the `Map` data type.
 ///
-/// Handles serialization and deserialization of Map objects with generic type parameters.
+/// Handles serialization and deserialization of Map objects with generic type
+/// parameters.
 class MapConverter extends JsonConverter<Map> {
   static const int _minimumGenericArguments = 2;
   static const String _assertionMessageValue = 'Value must be a Map';
@@ -344,9 +348,10 @@ class MapConverter extends JsonConverter<Map> {
   }
 }
 
-/// A JSON converter for the `List` data type.
+/// JSON converter for the `List` data type.
 ///
-/// Handles serialization and deserialization of List objects with generic type parameters.
+/// Handles serialization and deserialization of List objects with generic type
+/// parameters.
 class ListConverter extends JsonConverter<List> {
   static const int _minimumGenericArguments = 1;
   static const String _assertionMessageValue = 'Value must be a List';
@@ -395,7 +400,7 @@ class ListConverter extends JsonConverter<List> {
   }
 }
 
-/// A JSON converter for the `Object` data type.
+/// JSON converter for the `Object` data type.
 class ObjectConverter extends JsonConverter<Object> {
   static const String _typeName = 'Object';
 
@@ -413,7 +418,7 @@ class ObjectConverter extends JsonConverter<Object> {
   }
 }
 
-/// A JSON converter for the `dynamic` data type.
+/// JSON converter for the `dynamic` data type.
 class DynamicConverter extends JsonConverter<dynamic> {
   static const String _typeName = 'dynamic';
 
@@ -478,7 +483,9 @@ dynamic _findValueInMap(
 /// @param [options] The serializer options containing naming conventions.
 /// @returns The normalized property name in camelCase, or the original name if no match is found.
 String _normalizePropertyName(
-    String propertyName, JsonSerializerOptions options) {
+  String propertyName,
+  JsonSerializerOptions options,
+) {
   for (var convention in options.namingConventions) {
     if (convention.matches(propertyName)) {
       return convention.toCamelCase(propertyName);
@@ -488,7 +495,7 @@ String _normalizePropertyName(
   return propertyName;
 }
 
-/// A JSON converter for generic types.
+/// JSON converter for generic types.
 ///
 /// This converter handles the serialization and deserialization of generic types,
 /// including enums and user-defined types. It serves as a fallback converter for
@@ -496,6 +503,22 @@ String _normalizePropertyName(
 class GenericTypeConverter extends JsonConverter {
   static const String _assertionMessageMap =
       'Value must be a Map for user-defined type conversion';
+  static const String _errorUnsupportedType = 'Unsupported type';
+  static const String _errorTypeNotRegistered =
+      'The type is not registered as a user-defined type or enum.';
+  static const String _errorTypeRegistrationHint =
+      'Make sure to register the type using UserType() or EnumType() '
+      'in JsonSerializerOptions.';
+  static const String _errorConvertingEnum = 'Error converting to enum';
+  static const String _errorConvertingUserType = 'Error converting user-defined type';
+  static const String _errorRequiredParameterNotFound = 'Required parameter not found';
+  static const String _errorConvertingParameter = 'Error converting parameter';
+  static const String _errorReceivedValue = 'Received value';
+  static const String _errorExpectedType = 'Expected type';
+  static const String _errorValidValues = 'Valid values';
+  static const String _errorAvailableKeys = 'Available keys in JSON';
+  static const String _errorDetails = 'Details';
+  static const String _errorOriginalError = 'Original error';
 
   @override
   bool canConvert(TypeInfo type) => true;
@@ -528,10 +551,9 @@ class GenericTypeConverter extends JsonConverter {
     }
 
     throw JsonSerializerException(
-      'Unsupported type: "${type.name}".\n'
-      'The type is not registered as a user-defined type or enum.\n'
-      'Make sure to register the type using UserType() or EnumType() '
-      'in JsonSerializerOptions.',
+      '$_errorUnsupportedType: "${type.name}".\n'
+      '$_errorTypeNotRegistered\n'
+      '$_errorTypeRegistrationHint',
     );
   }
 
@@ -552,10 +574,10 @@ class GenericTypeConverter extends JsonConverter {
     } on ArgumentError catch (e) {
       final enumValues = enumType.values.map((v) => "'$v'").join(', ');
       throw JsonSerializerException(
-        'Error converting to enum ${type.name}.\n'
-        'Received value: "$value" (type: ${value.runtimeType})\n'
-        'Valid values: $enumValues\n'
-        'Details: ${e.message}',
+        '$_errorConvertingEnum ${type.name}.\n'
+        '$_errorReceivedValue: "$value" (type: ${value.runtimeType})\n'
+        '$_errorValidValues: $enumValues\n'
+        '$_errorDetails: ${e.message}',
       );
     }
   }
@@ -584,10 +606,10 @@ class GenericTypeConverter extends JsonConverter {
       if (param.isRequired && !param.type.isNullable && rawValue == null) {
         final availableKeys = values.keys.join(', ');
         throw JsonSerializerException(
-          'Error converting user-defined type "${type.name}".\n'
-          'Required parameter not found: "${param.name}"\n'
-          'Expected type: ${param.type.name}\n'
-          'Available keys in JSON: $availableKeys',
+          '$_errorConvertingUserType "${type.name}".\n'
+          '$_errorRequiredParameterNotFound: "${param.name}"\n'
+          '$_errorExpectedType: ${param.type.name}\n'
+          '$_errorAvailableKeys: $availableKeys',
         );
       }
 
@@ -603,10 +625,10 @@ class GenericTypeConverter extends JsonConverter {
         args[Symbol(param.name)] = decode(rawValue, param.type, options);
       } catch (e) {
         throw JsonSerializerException(
-          'Error converting parameter "${param.name}" of type "${type.name}".\n'
-          'Received value: "$rawValue" (type: ${rawValue.runtimeType})\n'
-          'Expected type: ${param.type.name}\n'
-          'Original error: $e',
+          '$_errorConvertingParameter "${param.name}" of type "${type.name}".\n'
+          '$_errorReceivedValue: "$rawValue" (type: ${rawValue.runtimeType})\n'
+          '$_errorExpectedType: ${param.type.name}\n'
+          '$_errorOriginalError: $e',
         );
       }
     }
